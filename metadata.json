@@ -1,0 +1,6 @@
+{
+  "name": "Little Roses Academy",
+  "description": "Little Roses Academy Nakuru - Official mobile and tablet application.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
