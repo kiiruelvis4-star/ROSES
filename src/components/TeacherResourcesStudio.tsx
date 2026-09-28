@@ -58,7 +58,6 @@ export type DocumentCategory =
   | 'revision_exams'
   | 'class_notes'
   | 'teacher_created'
-  | 'shared_staff'
   | 'timetables'
   | 'class_lists'
   | 'teacher_reports';
@@ -441,10 +440,9 @@ export function TeacherResourcesStudio({
     { id: 'revision_exams', title: '10. Revision Exams & Past Papers', icon: '🎯', desc: 'Term 3 & Remedial Focus Zone Papers' },
     { id: 'class_notes', title: '11. Class Notes (Day\'s Summary)', icon: '✏️', desc: 'Key in Today\'s Chalkboard Notes' },
     { id: 'teacher_created', title: '12. Teacher-created Documents', icon: '📓', desc: 'Teacher\'s Diary & Pedagogical Reflections' },
-    { id: 'shared_staff', title: '13. Shared Staff Documents', icon: '🤝', desc: 'Colleague Transfers & School Office Files' },
-    { id: 'timetables', title: '14. Timetables (Teacher & Class)', icon: '⏱️', desc: 'Editable Teacher Timetable + Class Timetable', badge: '2 Tables' },
-    { id: 'class_lists', title: '15. Class Lists / Learner Records', icon: '👥', desc: 'Learner Credentials, UPI & Rosters' },
-    { id: 'teacher_reports', title: '16. Teacher Reports (AI Focus Zone)', icon: '🧠', desc: 'Key in Observations • Auto-Sync Focus Zone' }
+    { id: 'timetables', title: '13. Timetables (Teacher & Class)', icon: '⏱️', desc: 'Editable Teacher Timetable + Class Timetable', badge: '2 Tables' },
+    { id: 'class_lists', title: '14. Class Lists / Learner Records', icon: '👥', desc: 'Learner Credentials, UPI & Rosters' },
+    { id: 'teacher_reports', title: '15. Teacher Reports (AI Focus Zone)', icon: '🧠', desc: 'Key in Observations • Auto-Sync Focus Zone' }
   ];
 
   const handleOpenInWord = (title: string, content: string = '') => {
@@ -1789,47 +1787,13 @@ export function TeacherResourcesStudio({
               </div>
             )}
 
-            {/* 13. SHARED STAFF DOCUMENTS */}
-            {activeCategory === 'shared_staff' && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between pb-2 border-b border-slate-200">
-                  <div>
-                    <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
-                      <span>🤝 13. Shared Staff Documents & School Office Circulars</span>
-                    </h3>
-                    <p className="text-xs text-slate-500">
-                      Circulated by administration or colleagues.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                  {[
-                    { title: 'School Pacing & Term Circular', sender: 'Administration Office' },
-                    { title: 'QASO Standards Guidelines', sender: 'Senior Leadership' }
-                  ].map((doc, idx) => (
-                    <div key={idx} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5">
-                      <h4 className="font-bold text-slate-900">{doc.title}</h4>
-                      <p className="text-[11px] text-slate-500">From: {doc.sender}</p>
-                      <button
-                        onClick={() => showToast(`Document "${doc.title}" opened in workbench`)}
-                        className="w-full mt-2 py-1.5 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-800 font-bold"
-                      >
-                        Open Document
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* 14. TIMETABLES (2 TIMETABLES: TEACHER'S EDITABLE & CLASS ADMIN TIMETABLE) */}
+            {/* 13. TIMETABLES (2 TIMETABLES: TEACHER'S EDITABLE & CLASS ADMIN TIMETABLE) */}
             {activeCategory === 'timetables' && (
               <div className="space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-200">
                   <div>
                     <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
-                      <span>⏱️ 14. The 2 Timetables (Teacher&apos;s Editable + Class Master)</span>
+                      <span>⏱️ 13. The 2 Timetables (Teacher&apos;s Editable + Class Master)</span>
                     </h3>
                     <p className="text-xs text-slate-500">
                       1) Teacher&apos;s Timetable (Editable by teacher) • 2) Class Timetable (Official from School Office)
@@ -1905,13 +1869,13 @@ export function TeacherResourcesStudio({
               </div>
             )}
 
-            {/* 15. CLASS LISTS / LEARNER RECORDS */}
+            {/* 14. CLASS LISTS / LEARNER RECORDS */}
             {activeCategory === 'class_lists' && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between pb-2 border-b border-slate-200">
                   <div>
                     <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
-                      <span>👥 15. Class Lists & Learner Credentials</span>
+                      <span>👥 14. Class Lists & Learner Credentials</span>
                     </h3>
                     <p className="text-xs text-slate-500">
                       Learner profiles, UPI numbers, login PINs/passwords, and roster records for {selectedGrade}.
@@ -1961,13 +1925,13 @@ export function TeacherResourcesStudio({
               </div>
             )}
 
-            {/* 16. TEACHER REPORTS (AI KNOWLEDGE & AUTO PUSH TO FOCUS ZONE) */}
+            {/* 15. TEACHER REPORTS (AI KNOWLEDGE & AUTO PUSH TO FOCUS ZONE) */}
             {activeCategory === 'teacher_reports' && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between pb-2 border-b border-slate-200">
                   <div>
                     <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
-                      <span>🧠 16. Teacher Reports & AI Focus Zone Sync</span>
+                      <span>🧠 15. Teacher Reports & AI Focus Zone Sync</span>
                     </h3>
                     <p className="text-xs text-slate-500">
                       Key in your lesson reflections for {selectedSubject}. Below Average (BE) or Approaching (AE) strands are automatically pushed to Learner Focus Zone!

@@ -147,44 +147,7 @@ export const DEFAULT_OFFICE_TEACHERS: TeacherRecord[] = [
   }
 ];
 
-export const DEFAULT_SHARED_DOCS: AdminSharedDocument[] = [
-  {
-    id: 'doc-1',
-    title: 'Grade 5 English CBC Approved Syllabus',
-    fileName: 'Grade 5 English Syllabus.pdf',
-    fileType: 'pdf',
-    category: 'Syllabus',
-    date: '15 Apr 2026',
-    targetGrade: 'Grade 5',
-    sharedBy: 'Mr. Elvis Kiiru • Administration',
-    fileSize: '1.4 MB',
-    notes: 'KICD Approved curriculum design for Upper Primary English.'
-  },
-  {
-    id: 'doc-2',
-    title: 'Official CBC 30-Mark Assessment Guidelines (QASO Standard)',
-    fileName: 'CBC 30-Mark Assessment Guidelines.pdf',
-    fileType: 'pdf',
-    category: 'Assessment Guide',
-    date: '10 Apr 2026',
-    targetGrade: 'All Classes',
-    sharedBy: 'Administration Office',
-    fileSize: '820 KB',
-    notes: '10 marks assignments + 20 marks CAT standard for termly records.'
-  },
-  {
-    id: 'doc-3',
-    title: 'Term 1 Academic Pacing & Activity Circular',
-    fileName: 'Term 1 Circular 2026.pdf',
-    fileType: 'pdf',
-    category: 'Circular',
-    date: '08 Apr 2026',
-    targetGrade: 'All Classes',
-    sharedBy: 'Head Teacher • Little Roses Academy',
-    fileSize: '450 KB',
-    notes: 'Instructions on school activities, sports breaks, and exam pacing.'
-  }
-];
+export const DEFAULT_SHARED_DOCS: AdminSharedDocument[] = [];
 
 // Helper to clean phone numbers for accurate matching
 export function normalizePhone(phone: string): string {
@@ -348,13 +311,12 @@ export function getSharedAdminDocuments(): AdminSharedDocument[] {
     const saved = localStorage.getItem(SHARED_DOCS_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed)) return parsed;
     }
   } catch (e) {
     console.error('Error reading shared documents:', e);
   }
-  localStorage.setItem(SHARED_DOCS_KEY, JSON.stringify(DEFAULT_SHARED_DOCS));
-  return DEFAULT_SHARED_DOCS;
+  return [];
 }
 
 export function saveSharedAdminDocuments(docs: AdminSharedDocument[]): void {

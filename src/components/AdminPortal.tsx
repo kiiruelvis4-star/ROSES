@@ -51,7 +51,9 @@ import {
   RefreshCw,
   Share2
 } from 'lucide-react';
-import { CircularBadgeLogo } from './CircularBadgeLogo.tsx';
+import { Logo } from './Logo.tsx';
+import { dataLayer } from '../services/dataLayer.ts';
+import { Camera, Image as ImageIcon } from 'lucide-react';
 import { TeacherAdminConsole } from './TeacherAdminConsole.tsx';
 import {
   getRegisteredTeachers,
@@ -289,6 +291,13 @@ export function AdminPortal({ mode = 'phone', onBackToPortals, onSwitchToTeacher
 
   // Navigation Tab: 6 WhatsApp-style dedicated tabs
   const [activeTab, setActiveTab] = useState<'home' | 'teachers' | 'pupils' | 'families' | 'timetable' | 'promotion'>('home');
+  const mainContentRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (mainContentRef.current) {
+      mainContentRef.current.scrollTop = 0;
+    }
+  }, [activeTab]);
 
   // Notification Toast
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -554,26 +563,9 @@ export function AdminPortal({ mode = 'phone', onBackToPortals, onSwitchToTeacher
   };
 
   const handlePushToTeacherPortal = (targetTeacher: TeacherRecord, payload: any) => {
-    try {
-      if (payload.type === 'resources_update') {
-        const docPayload: AdminSharedDocument = {
-          id: `pushed-${Date.now()}`,
-          title: `${payload.grade} Schemes & Lesson Plan (${targetTeacher.name})`,
-          fileName: `${payload.grade}_Approved_Schemes.pdf`,
-          fileType: 'pdf',
-          category: 'Scheme of Work',
-          date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-          targetGrade: payload.grade,
-          sharedBy: `${dualRoleUser} • Administration`,
-          fileSize: '850 KB',
-          notes: payload.lessonPlan || 'Pushed directly to teacher workspace by school administration.'
-        };
-        const updatedDocs = [docPayload, ...sharedDocs.filter((d) => d.id !== docPayload.id)];
-        setSharedDocs(updatedDocs);
-        saveSharedAdminDocuments(updatedDocs);
-      }
-    } catch (e) {
-      console.error('Error pushing to teacher portal:', e);
+    // Schemes & lesson documents are teacher's own work and not pushed from office
+    if (payload.type === 'timetable_scoped') {
+      showToast(`Timetable periods scoped for ${targetTeacher.name} 🗓️`);
     }
   };
 
@@ -1321,8 +1313,8 @@ export function AdminPortal({ mode = 'phone', onBackToPortals, onSwitchToTeacher
         <div className="relative z-10 w-full max-w-sm mx-auto my-auto py-3">
           <div className="bg-[#0B152E]/95 backdrop-blur-xl border-2 border-amber-400/90 rounded-3xl p-6 shadow-[0_20px_50px_rgba(0,0,0,0.9)] flex flex-col items-center text-center">
             {/* Crest Logo */}
-            <div className="w-16 h-16 rounded-full border-2 border-amber-400 bg-[#ECD8C0] overflow-hidden mb-2.5 shadow-md flex items-center justify-center">
-              <CircularBadgeLogo className="w-16 h-16" />
+            <div className="w-16 h-16 mb-2.5 flex items-center justify-center">
+              <Logo size="md" showTagline={false} />
             </div>
 
             <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-900/90 border border-amber-400/50 text-[10px] font-bold text-amber-300 uppercase tracking-widest mb-1.5">
@@ -1424,8 +1416,8 @@ export function AdminPortal({ mode = 'phone', onBackToPortals, onSwitchToTeacher
       <header className="relative z-30 w-full flex items-center justify-between px-3 sm:px-4 py-2.5 bg-[#0F172A] border-b border-slate-800 text-white shadow-md">
         {/* Left: Little Roses Crest & School Office Title */}
         <div className="flex items-center gap-2.5">
-          <div className="w-11 h-11 rounded-full border border-amber-400 bg-[#ECD8C0] overflow-hidden flex items-center justify-center shadow-sm flex-shrink-0">
-            <CircularBadgeLogo className="w-11 h-11" />
+          <div className="w-11 h-11 flex items-center justify-center flex-shrink-0">
+            <Logo size="sm" showTagline={false} />
           </div>
 
           <div>
@@ -1575,7 +1567,7 @@ export function AdminPortal({ mode = 'phone', onBackToPortals, onSwitchToTeacher
       {/* =========================================================================
           3. MAIN CONTENT CONTAINER (SWITCHES ACROSS 6 DEDICATED TABS)
           ========================================================================= */}
-      <main className="relative z-10 flex-1 overflow-y-auto p-3 sm:p-4 pb-24 space-y-4">
+      <main ref={mainContentRef} className="relative z-10 flex-1 overflow-y-auto p-3 sm:p-4 pb-24 space-y-4">
         
         {/* -----------------------------------------------------------------------
             TAB 1: 🏠 HOME (SCHOOL VITALS & DAILY OVERVIEW)
@@ -1792,6 +1784,89 @@ export function AdminPortal({ mode = 'phone', onBackToPortals, onSwitchToTeacher
                 <Send className="w-4 h-4" />
                 <span>Publish Announcement</span>
               </button>
+            </div>
+
+            {/* School Logo & Campus Photo Management */}
+            <div className={`p-4 rounded-2xl border ${
+              isDarkMode ? 'bg-[#0B152E]/90 border-slate-800' : 'bg-white border-slate-200'
+            } space-y-3`}>
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Camera className="w-4 h-4" />
+                  <span>Exact School Logo & Campus Background</span>
+                </h4>
+                <span className="text-[10px] text-slate-400">PWA & Portal Assets</span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-1">
+                {/* Logo Preview & Upload */}
+                <div className="flex flex-col items-center p-3 rounded-xl bg-slate-950/60 border border-slate-800 text-center">
+                  <div className="w-16 h-16 relative flex items-center justify-center mb-2">
+                    <Logo size="md" showTagline={false} />
+                  </div>
+                  <span className="text-[11px] font-bold text-white mb-0.5">School Crest</span>
+                  <span className="text-[9px] text-slate-400 mb-2">Exact badge replica</span>
+                  <label className="cursor-pointer px-2.5 py-1 rounded-full bg-amber-400 hover:bg-amber-300 text-slate-950 text-[10px] font-bold shadow transition active:scale-95 flex items-center gap-1">
+                    <Camera className="w-3 h-3" />
+                    <span>Upload Logo</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = (ev) => {
+                            const res = ev.target?.result as string;
+                            if (res) {
+                              dataLayer.setAttachedLogo(res);
+                              showToast('School logo updated successfully!');
+                            }
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
+
+                {/* Campus Photo Preview & Upload */}
+                <div className="flex flex-col items-center p-3 rounded-xl bg-slate-950/60 border border-slate-800 text-center">
+                  <div className="w-16 h-16 rounded-xl overflow-hidden border border-slate-700 mb-2 bg-slate-900">
+                    <img
+                      src={dataLayer.getAttachedCampusPhoto() || '/src/assets/images/little_roses_campus_1790246122159.jpg'}
+                      alt="Campus Background"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <span className="text-[11px] font-bold text-white mb-0.5">Campus Photo</span>
+                  <span className="text-[9px] text-slate-400 mb-2">Splash 1 background</span>
+                  <label className="cursor-pointer px-2.5 py-1 rounded-full bg-sky-500 hover:bg-sky-400 text-slate-950 text-[10px] font-bold shadow transition active:scale-95 flex items-center gap-1">
+                    <ImageIcon className="w-3 h-3" />
+                    <span>Upload Photo</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = (ev) => {
+                            const res = ev.target?.result as string;
+                            if (res) {
+                              dataLayer.setAttachedCampusPhoto(res);
+                              showToast('Campus background photo updated!');
+                            }
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
+              </div>
             </div>
 
             {/* School Details, Motto & Backup Card */}
@@ -3375,7 +3450,7 @@ export function AdminPortal({ mode = 'phone', onBackToPortals, onSwitchToTeacher
       {/* =========================================================================
           4. BOTTOM NAVIGATION BAR (WHATSAPP-STYLE DEDICATED 6 TABS)
           ========================================================================= */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-[#0F172A] border-t border-slate-800 px-2 py-1.5 flex items-center justify-around shadow-2xl">
+      <nav className="sticky bottom-0 z-40 w-full bg-[#0F172A] border-t border-slate-800 px-2 py-1.5 flex items-center justify-around shadow-2xl flex-shrink-0">
         <button
           onClick={() => setActiveTab('home')}
           className={`flex flex-col items-center gap-1 px-3 py-1 rounded-xl transition-all cursor-pointer ${

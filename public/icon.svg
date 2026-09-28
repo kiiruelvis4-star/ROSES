@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="500" height="500">
+  <circle cx="250" cy="250" r="240" fill="#2E486D"/>
+  <circle cx="250" cy="250" r="218" fill="#ECD8C0"/>
+  <path id="lraTop" d="M 68, 250 A 182, 182 0 0, 1 432, 250" fill="none"/>
+  <text fill="#111111" font-family="Montserrat, Arial, sans-serif" font-weight="900" font-size="31" letter-spacing="2">
+    <textPath href="#lraTop" startOffset="50%" text-anchor="middle">LITTLE ROSES ACADEMY</textPath>
+  </text>
+  <text x="250" y="146" text-anchor="middle" fill="#111111" font-family="Montserrat, Arial, sans-serif" font-weight="900" font-size="32" letter-spacing="4">NAKURU</text>
+  <path d="M 172, 154 L 328, 154" stroke="#111" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Heraldic Shield -->
+  <path d="M 172, 168 L 328, 168 L 328, 186 L 352, 186 L 344, 226 C 336, 310 250, 370 250, 370 C 250, 370 164, 310 156, 226 L 148, 186 L 172, 186 Z" fill="#FFFFFF" stroke="#2E486D" stroke-width="5"/>
+  <path d="M 250, 192 L 320, 192 L 320, 206 L 338, 206 L 332, 236 C 326, 298 250, 348 250, 348 Z" fill="#EAEAEA"/>
+  <!-- Graduation Cap -->
+  <polygon points="250,210 286,226 250,242 214,226" fill="#128CEC"/>
+  <!-- Open Book -->
+  <path d="M 226, 276 Q 250, 268 250, 294 Q 250, 268 274, 276 L 274, 310 Q 250, 302 250, 326 Q 250, 302 226, 310 Z" fill="#ECD8C0" stroke="#2E486D" stroke-width="2"/>
+  <!-- Rose -->
+  <circle cx="250" cy="336" r="10" fill="#E23434"/>
+  <!-- Bottom Ribbon -->
+  <path d="M 110, 400 Q 250, 450 390, 400 L 375, 434 Q 250, 480 125, 434 Z" fill="#2E486D"/>
+  <path id="lraTagline" d="M 115, 420 Q 250, 468 385, 420" fill="none"/>
+  <text fill="#FFD700" font-family="Montserrat, Arial, sans-serif" font-weight="900" font-size="16" letter-spacing="3">
+    <textPath href="#lraTagline" startOffset="50%" text-anchor="middle">LEARN TODAY BUILD TOMORROW</textPath>
+  </text>
+</svg>

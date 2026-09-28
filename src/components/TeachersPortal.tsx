@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Calendar,
   Clock,
@@ -48,7 +48,8 @@ import {
   CheckCheck,
   Target,
   ClipboardCheck,
-  Bell
+  Bell,
+  FolderOpen
 } from 'lucide-react';
 import { CircularBadgeLogo } from './CircularBadgeLogo';
 import { TeacherResourcesStudio } from './TeacherResourcesStudio.tsx';
@@ -58,9 +59,7 @@ import {
   findTeacherByPhoneOrName,
   checkTeacherIsParent,
   getRememberedTeacherSession,
-  saveRememberedTeacherSession,
-  getSharedAdminDocuments,
-  AdminSharedDocument
+  saveRememberedTeacherSession
 } from '../services/schoolDataService.ts';
 
 export interface TeachersPortalProps {
@@ -289,7 +288,7 @@ export const INITIAL_PUPILS: PupilRecord[] = [
 ];
 
 // -----------------------------------------------------------------------------
-// TIMETABLE LESSON COCKPIT & CONNECTED DOCUMENT CHAIN
+// TIMETABLE LESSON COCKPIT & PERIOD SCHEDULE
 // -----------------------------------------------------------------------------
 export interface LessonPeriodItem {
   id: string;
@@ -304,20 +303,6 @@ export interface LessonPeriodItem {
   rescheduleReason?: string;
   assignmentAttached: boolean;
   subjectColor: string;
-  // The Connected Document Chain
-  schemeExtract: {
-    strand: string;
-    subStrand: string;
-    learningOutcomes: string[];
-  };
-  lessonPlan: {
-    objectives: string[];
-    keyInquiryQuestions: string[];
-    competencies: string[];
-    lessonSteps: { title: string; time: string; desc: string }[];
-  };
-  teacherNotes: string[];
-  classNotesSummary: string;
   homeworkSheet: {
     title: string;
     description: string;
@@ -343,31 +328,8 @@ export function createDefaultLessonsForTeacher(teacher?: { subjects?: string[]; 
       status: 'Pending',
       assignmentAttached: false,
       subjectColor: '#3B82F6',
-      schemeExtract: {
-        strand: 'Strand 1',
-        subStrand: 'Sub-strand 1',
-        learningOutcomes: [
-          'Learners achieve specific learning outcomes as keyed in by the teacher.'
-        ]
-      },
-      lessonPlan: {
-        objectives: ['Master key concept through guided practical activity'],
-        keyInquiryQuestions: ['How does this concept apply in our daily lives?'],
-        competencies: ['Critical thinking', 'Problem solving', 'Collaboration'],
-        lessonSteps: [
-          { title: 'Starter (5 mins)', time: '08:10', desc: 'Mental warm-up and prior knowledge diagnostic check.' },
-          { title: 'Introduction (10 mins)', time: '08:15', desc: 'Teacher demonstrates key concept on chalkboard.' },
-          { title: 'Main Activity (25 mins)', time: '08:25', desc: 'Guided paired exercises and independent pupil tasks.' },
-          { title: 'Plenary (10 mins)', time: '08:50', desc: 'Learner feedback, reflection, and exit ticket.' }
-        ]
-      },
-      teacherNotes: [
-        'Prepared teaching aids and concrete learning resources.',
-        'Check pupil exercise books during independent practice.'
-      ],
-      classNotesSummary: 'Chalkboard Summary:\n[Teacher keys in today\'s board notes for pupils to copy]',
       homeworkSheet: {
-        title: 'Day\'s Homework Worksheet',
+        title: "Day's Homework Worksheet",
         description: 'Answer questions in exercise workbook as directed by teacher.',
         dueDate: 'Tomorrow (08:00 AM)'
       }
@@ -384,25 +346,6 @@ export function createDefaultLessonsForTeacher(teacher?: { subjects?: string[]; 
       taughtAt: '',
       assignmentAttached: false,
       subjectColor: '#10B981',
-      schemeExtract: {
-        strand: 'Strand 2',
-        subStrand: 'Sub-strand 2',
-        learningOutcomes: [
-          'Apply core competencies to solve practical problems.'
-        ]
-      },
-      lessonPlan: {
-        objectives: ['Demonstrate clear understanding of the sub-strand'],
-        keyInquiryQuestions: ['Where do we encounter this in the community?'],
-        competencies: ['Communication', 'Digital literacy'],
-        lessonSteps: [
-          { title: 'Starter (5 mins)', time: '09:00', desc: 'Review of previous lesson.' },
-          { title: 'Guided Work (35 mins)', time: '09:05', desc: 'Step-by-step problem solving.' },
-          { title: 'Conclusion (10 mins)', time: '09:40', desc: 'Wrap-up and assignment review.' }
-        ]
-      },
-      teacherNotes: ['Textbooks and exercise books required.'],
-      classNotesSummary: 'Chalkboard Notes:\n[Teacher keys in lesson summary here]',
       homeworkSheet: {
         title: 'Practice Assignment',
         description: 'Solve assigned practice tasks in notebooks.',
@@ -420,25 +363,6 @@ export function createDefaultLessonsForTeacher(teacher?: { subjects?: string[]; 
       status: 'Pending',
       assignmentAttached: false,
       subjectColor: '#8B5CF6',
-      schemeExtract: {
-        strand: 'Strand 3',
-        subStrand: 'Sub-strand 3',
-        learningOutcomes: [
-          'Demonstrate practical skills and express imagination.'
-        ]
-      },
-      lessonPlan: {
-        objectives: ['Demonstrate techniques with high accuracy'],
-        keyInquiryQuestions: ['What materials and tools are used?'],
-        competencies: ['Self-efficacy', 'Creativity and imagination'],
-        lessonSteps: [
-          { title: 'Starter (10 mins)', time: '10:50', desc: 'Teacher demonstration.' },
-          { title: 'Practice (30 mins)', time: '11:00', desc: 'Individual and group activity.' },
-          { title: 'Gallery Walk (10 mins)', time: '11:30', desc: 'Peer appraisal and reflection.' }
-        ]
-      },
-      teacherNotes: ['Ensure all learners have required instructional tools.'],
-      classNotesSummary: 'Key Points:\n[Teacher keys in class notes summary]',
       homeworkSheet: {
         title: 'Application Activity',
         description: 'Complete project or exercise at home.',
@@ -903,8 +827,15 @@ export function TeachersPortal({
   // GLOBAL APPLICATION STATE & OFFLINE MECHANICS
   // ---------------------------------------------------------------------------
   const [activeTab, setActiveTab] = useState<
-    'timetable' | 'classes' | 'assessments' | 'resources' | 'messages'
+    'timetable' | 'classes' | 'resources' | 'assessments' | 'messages'
   >('timetable');
+  const mainContentRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (mainContentRef.current) {
+      mainContentRef.current.scrollTop = 0;
+    }
+  }, [activeTab]);
 
   // Push Assignment tracking per lesson
   const [pushedAssignments, setPushedAssignments] = useState<
@@ -948,16 +879,14 @@ export function TeachersPortal({
     return checkTeacherIsParent(currentTeacher.phone);
   }, [currentTeacher]);
 
-  // Admin shared documents (From Administration shelf)
-  const [adminDocs, setAdminDocs] = useState<AdminSharedDocument[]>(() => {
-    return getSharedAdminDocuments();
-  });
-  const [previewingDoc, setPreviewingDoc] = useState<AdminSharedDocument | null>(null);
-
   useEffect(() => {
-    // Refresh admin docs on mount or tab change
-    setAdminDocs(getSharedAdminDocuments());
-  }, [activeTab]);
+    // Clear out any previously cached admin shared docs so teacher's portal is strictly teacher's own work
+    try {
+      localStorage.removeItem('lra_shared_admin_docs');
+    } catch {
+      // ignore
+    }
+  }, []);
 
   const handleTeacherLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1041,11 +970,6 @@ export function TeachersPortal({
     duration: '50 mins',
     room: 'Room 3',
     topic: '',
-    strand: '',
-    subStrand: '',
-    outcomes: '',
-    kiq: '',
-    classNotes: '',
     homeworkTitle: '',
     homeworkDesc: '',
     dueDate: 'Tomorrow 08:00 AM'
@@ -1079,23 +1003,6 @@ export function TeachersPortal({
       status: 'Pending',
       assignmentAttached: false,
       subjectColor: '#10B981',
-      schemeExtract: {
-        strand: newLessonForm.strand || 'Strand 1',
-        subStrand: newLessonForm.subStrand || 'Sub-strand 1',
-        learningOutcomes: [newLessonForm.outcomes || 'Achieve specified strand outcomes']
-      },
-      lessonPlan: {
-        objectives: [newLessonForm.outcomes || 'Master key concepts'],
-        keyInquiryQuestions: [newLessonForm.kiq || 'Why is this important in daily life?'],
-        competencies: ['Critical thinking', 'Collaboration'],
-        lessonSteps: [
-          { title: 'Starter (5 mins)', time: 'Start', desc: 'Diagnostic check and prior knowledge' },
-          { title: 'Main Activity (35 mins)', time: '+10m', desc: 'Paired tasks and exercise books' },
-          { title: 'Plenary (10 mins)', time: 'End', desc: 'Summary and assignment distribution' }
-        ]
-      },
-      teacherNotes: ['Prepared instructional materials.'],
-      classNotesSummary: newLessonForm.classNotes || 'Chalkboard Summary:\n[Teacher keys in notes summary]',
       homeworkSheet: {
         title: newLessonForm.homeworkTitle || 'Homework Task',
         description: newLessonForm.homeworkDesc || 'Complete workbook questions.',
@@ -1131,10 +1038,10 @@ export function TeachersPortal({
       id: `row-${Date.now()}`,
       week: 4,
       dateTaught: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
-      strand: target.schemeExtract.strand,
-      subStrand: target.schemeExtract.subStrand,
-      learningOutcomes: target.schemeExtract.learningOutcomes[0] || 'Completed outcomes',
-      workDone: `Taught ${target.subject} (${target.topic}). Practical exercises done in exercise books.`,
+      strand: target.subject,
+      subStrand: target.topic,
+      learningOutcomes: `Taught ${target.subject}: ${target.topic}`,
+      workDone: `Taught ${target.subject} (${target.topic}). Class attendance marked.`,
       teacherSignature: (currentTeacher?.name || 'Staff').replace('Tr. ', '').replace('Mr. ', '')
     };
 
@@ -1220,8 +1127,8 @@ export function TeachersPortal({
       id: `row-shift-${Date.now()}`,
       week: 4,
       dateTaught: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
-      strand: target.schemeExtract.strand,
-      subStrand: `${target.schemeExtract.subStrand} (Unticked - Shifted Forward)`,
+      strand: target.subject,
+      subStrand: `${target.topic} (Unticked - Shifted Forward)`,
       learningOutcomes: 'Shifted forward: Subsequent day work moved ahead not combined',
       workDone: `Work not completed on ${target.time}. Topic squeezed to following day to ensure comprehensive mastery.`,
       teacherSignature: 'Pushed Ahead ⏩'
@@ -1441,14 +1348,6 @@ export function TeachersPortal({
     localStorage.setItem('lra_teacher_record_of_work', JSON.stringify(recordOfWork));
   }, [recordOfWork]);
 
-  const [documentStudioTab, setDocumentStudioTab] = useState<
-    'schemes' | 'plans' | 'notes' | 'classNotes' | 'worksheets'
-  >('plans');
-
-  const [lessonPlanText, setLessonPlanText] = useState<string>(
-    `Strand: Listening and Speaking\nSub-Strand: Comprehension\n\nLearning Outcome:\nBy the end of the lesson, the learner should be able to listen to a short story and answer questions appropriately.\n\nLearning Experiences:\n• Learners listen to the story read aloud by the teacher.\n• Learners answer comprehension questions in pairs.\n• Learners discuss answers in small groups.\n\nKey Inquiry Question:\nWhat was the main idea of the story?`
-  );
-
   // ---------------------------------------------------------------------------
   // TAB 5: MESSAGES & PARENT COMMUNICATION
   // ---------------------------------------------------------------------------
@@ -1472,13 +1371,13 @@ export function TeachersPortal({
 
   // De-congested dashboard states: Profile & System Controls Drawer + Sub-tab per lesson
   const [showTeacherProfileModal, setShowTeacherProfileModal] = useState<boolean>(false);
-  const [lessonActiveSubTab, setLessonActiveSubTab] = useState<Record<string, 'plan' | 'homework' | 'roster'>>({});
+  const [lessonActiveSubTab, setLessonActiveSubTab] = useState<Record<string, 'homework' | 'roster'>>({});
 
-  const getLessonSubTab = (id: string): 'plan' | 'homework' | 'roster' => {
-    return lessonActiveSubTab[id] || 'plan';
+  const getLessonSubTab = (id: string): 'homework' | 'roster' => {
+    return lessonActiveSubTab[id] || 'homework';
   };
 
-  const setLessonSubTab = (id: string, tab: 'plan' | 'homework' | 'roster') => {
+  const setLessonSubTab = (id: string, tab: 'homework' | 'roster') => {
     setLessonActiveSubTab((prev) => ({ ...prev, [id]: tab }));
   };
 
@@ -1700,7 +1599,7 @@ export function TeachersPortal({
       {/* =======================================================================
           2. MAIN VIEWPORT (5 TABS - SELF-CONTAINED FULL-PAGE SCREENS)
           ======================================================================= */}
-      <main className="flex-1 w-full overflow-y-auto overflow-x-hidden p-3 sm:p-4 space-y-3 pb-24">
+      <main ref={mainContentRef} className="flex-1 w-full overflow-y-auto overflow-x-hidden p-3 sm:p-4 space-y-3 pb-24">
         {/* -------------------------------------------------------------------
             TAB 1: 📅 DAILY COCKPIT (TIMETABLE COMMAND CENTER)
             ------------------------------------------------------------------- */}
@@ -1773,11 +1672,6 @@ export function TeachersPortal({
                       duration: '50 mins',
                       room: 'Room 3',
                       topic: '',
-                      strand: '',
-                      subStrand: '',
-                      outcomes: '',
-                      kiq: '',
-                      classNotes: '',
                       homeworkTitle: '',
                       homeworkDesc: '',
                       dueDate: 'Tomorrow 08:00 AM'
@@ -1917,7 +1811,7 @@ export function TeachersPortal({
                               Lesson Workbench · {lesson.subject} ({lesson.grade})
                             </span>
                             <p className="text-[11px] text-slate-500">
-                              Topic: {lesson.topic} · Strand: {lesson.schemeExtract.strand}
+                              Topic: {lesson.topic} · Room: {lesson.room}
                             </p>
                           </div>
                           <button
@@ -1931,17 +1825,6 @@ export function TeachersPortal({
 
                         {/* Segmented Sub-Tab Switcher (Prevents vertical clutter) */}
                         <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl">
-                          <button
-                            type="button"
-                            onClick={() => setLessonSubTab(lesson.id, 'plan')}
-                            className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                              getLessonSubTab(lesson.id) === 'plan'
-                                ? 'bg-white text-slate-900 shadow-sm'
-                                : 'text-slate-600 hover:text-slate-900'
-                            }`}
-                          >
-                            📖 Plan & Notes
-                          </button>
                           <button
                             type="button"
                             onClick={() => setLessonSubTab(lesson.id, 'homework')}
@@ -1966,87 +1849,7 @@ export function TeachersPortal({
                           </button>
                         </div>
 
-                        {/* SUB-TAB 1: PLAN & NOTES */}
-                        {getLessonSubTab(lesson.id) === 'plan' && (
-                          <div className="space-y-3 animate-fadeIn">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                              {/* 1. Scheme of Work Extract */}
-                              <div className="p-3 rounded-xl bg-blue-50/70 border border-blue-200 space-y-1.5">
-                                <div className="flex items-center gap-1.5 font-bold text-blue-900 text-xs uppercase">
-                                  <BookOpen className="w-3.5 h-3.5 text-blue-600" />
-                                  <span>1. Scheme of Work Extract</span>
-                                </div>
-                                <div className="text-[11px] text-slate-700">
-                                  <span className="font-bold">Strand:</span> {lesson.schemeExtract.strand}
-                                </div>
-                                <div className="text-[11px] text-slate-700">
-                                  <span className="font-bold">Sub-strand:</span> {lesson.schemeExtract.subStrand}
-                                </div>
-                                <div className="text-[11px] text-slate-700">
-                                  <span className="font-bold text-blue-950">Learning Outcomes:</span>
-                                  <ul className="list-disc list-inside mt-0.5 space-y-0.5">
-                                    {lesson.schemeExtract.learningOutcomes.map((lo, i) => (
-                                      <li key={i}>{lo}</li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              </div>
-
-                              {/* 2. Lesson Plan */}
-                              <div className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200 space-y-1.5">
-                                <div className="flex items-center gap-1.5 font-bold text-emerald-900 text-xs uppercase">
-                                  <ClipboardList className="w-3.5 h-3.5 text-emerald-600" />
-                                  <span>2. CBC Lesson Plan Details</span>
-                                </div>
-                                <div className="text-[11px] text-slate-700">
-                                  <span className="font-bold">Key Inquiry Questions:</span>
-                                  <p className="italic text-emerald-950">
-                                    {lesson.lessonPlan.keyInquiryQuestions[0]}
-                                  </p>
-                                </div>
-                                <div className="text-[11px] text-slate-700">
-                                  <span className="font-bold">Core Competencies:</span>{' '}
-                                  {lesson.lessonPlan.competencies.join(', ')}
-                                </div>
-                                <div className="text-[10px] text-slate-600 space-y-0.5 mt-1 border-t border-emerald-200 pt-1">
-                                  {lesson.lessonPlan.lessonSteps.map((step, idx) => (
-                                    <div key={idx}>
-                                      <span className="font-bold text-slate-800">{step.title}:</span> {step.desc}
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                              {/* 3. Teacher's Complete Lesson Notes */}
-                              <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-200 space-y-1.5">
-                                <div className="flex items-center gap-1.5 font-bold text-amber-900 text-xs uppercase">
-                                  <Edit3 className="w-3.5 h-3.5 text-amber-600" />
-                                  <span>3. Teacher&apos;s Reference Notes</span>
-                                </div>
-                                <ul className="list-disc list-inside text-[11px] text-slate-700 space-y-1">
-                                  {lesson.teacherNotes.map((note, idx) => (
-                                    <li key={idx}>{note}</li>
-                                  ))}
-                                </ul>
-                              </div>
-
-                              {/* 4. Day's Class Notes (Board Summary) */}
-                              <div className="p-3 rounded-xl bg-purple-50/70 border border-purple-200 space-y-1.5">
-                                <div className="flex items-center gap-1.5 font-bold text-purple-900 text-xs uppercase">
-                                  <Sparkles className="w-3.5 h-3.5 text-purple-600" />
-                                  <span>4. Chalkboard Summary (Learner Book)</span>
-                                </div>
-                                <div className="p-2 rounded-lg bg-white border border-purple-200 font-mono text-[11px] text-purple-950 whitespace-pre-line shadow-inner">
-                                  {lesson.classNotesSummary}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* SUB-TAB 2: HOMEWORK & PUSH */}
+                        {/* SUB-TAB 1: HOMEWORK & PUSH */}
                         {getLessonSubTab(lesson.id) === 'homework' && (
                           <div className="p-3.5 rounded-2xl bg-rose-50/90 border border-rose-200 space-y-2.5 animate-fadeIn">
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
@@ -2408,7 +2211,19 @@ export function TeachersPortal({
         )}
 
         {/* -------------------------------------------------------------------
-            TAB 3: 📝 ASSESSMENTS (OFFICIAL CBC 30-MARK BOOK)
+            TAB 3: 📁 RESOURCES STUDIO (16 CBC WORKFLOW FOLDERS)
+            ------------------------------------------------------------------- */}
+        {activeTab === 'resources' && currentTeacher && (
+          <div className="space-y-3 max-w-4xl mx-auto animate-fadeIn">
+            <TeacherResourcesStudio
+              currentTeacher={currentTeacher}
+              showToast={showToast}
+            />
+          </div>
+        )}
+
+        {/* -------------------------------------------------------------------
+            TAB 4: 📝 ASSESSMENTS (OFFICIAL CBC 30-MARK BOOK)
             ------------------------------------------------------------------- */}
         {activeTab === 'assessments' && (
           <div className="space-y-3 max-w-4xl mx-auto animate-fadeIn">
@@ -2791,38 +2606,7 @@ export function TeachersPortal({
         )}
 
         {/* -------------------------------------------------------------------
-            TAB 4: 📚 RESOURCES (THE 16 TEACHER DOCUMENTS & STUDIO TOOLS)
-            ------------------------------------------------------------------- */}
-        {activeTab === 'resources' && (
-          <div className="space-y-4 max-w-5xl mx-auto animate-fadeIn">
-            <TeacherResourcesStudio
-              currentTeacher={currentTeacher}
-              onPushAssignment={(assignmentData) => {
-                const pushMsg = `📢 New ${assignmentData.subject} Assignment (${assignmentData.grade}): "${assignmentData.title}". Due: ${assignmentData.dueDate}. Please verify and guide your child.`;
-                setParentThreads((prev) =>
-                  prev.map((t) => ({
-                    ...t,
-                    lastMessage: pushMsg,
-                    lastTime: 'Just now',
-                    messages: [
-                      ...t.messages,
-                      {
-                        sender: 'teacher',
-                        text: pushMsg,
-                        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                      }
-                    ]
-                  }))
-                );
-                showToast(`🚀 Assignment "${assignmentData.title}" pushed to all ${assignmentData.grade} learners & parents! Broadcast recorded in Messages.`);
-              }}
-              showToast={showToast}
-            />
-          </div>
-        )}
-
-        {/* -------------------------------------------------------------------
-            TAB 5: 💬 MESSAGES & PARENT COMMUNICATION
+            TAB 4: 💬 MESSAGES & PARENT COMMUNICATION
             ------------------------------------------------------------------- */}
         {activeTab === 'messages' && (
           <div className="space-y-4 max-w-3xl mx-auto animate-fadeIn">
@@ -3038,8 +2822,8 @@ export function TeachersPortal({
         {[
           { id: 'timetable', label: 'Timetable', icon: Calendar },
           { id: 'classes', label: 'My Classes', icon: Users },
+          { id: 'resources', label: 'Resources', icon: FolderOpen },
           { id: 'assessments', label: 'Assessments', icon: ClipboardList },
-          { id: 'resources', label: 'Resources', icon: BookOpen },
           { id: 'messages', label: 'Messages', icon: MessageSquare, badge: 2 }
         ].map((tab) => {
           const isActive = activeTab === tab.id;
@@ -3210,78 +2994,6 @@ export function TeachersPortal({
       )}
 
       {/* =======================================================================
-          ADMIN SHARED DOCUMENT PREVIEW MODAL
-          ======================================================================= */}
-      {previewingDoc && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
-          <div className="bg-[#0B152E] border-2 border-blue-500 rounded-3xl w-full max-w-md p-5 text-white shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-              <div className="flex items-center gap-2">
-                <span className="text-xl">📄</span>
-                <div>
-                  <h3 className="font-bold text-base text-white truncate max-w-[260px]">{previewingDoc.title}</h3>
-                  <p className="text-[10px] text-blue-300 font-mono">{previewingDoc.fileName} • {previewingDoc.date}</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setPreviewingDoc(null)}
-                className="p-1 rounded-full text-slate-400 hover:text-white"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-3 text-xs bg-slate-950/80 p-3.5 rounded-2xl border border-slate-800">
-              <div className="flex items-center justify-between text-slate-300">
-                <span className="text-slate-400">Category:</span>
-                <span className="font-bold text-blue-400 bg-blue-500/20 px-2 py-0.5 rounded-full">{previewingDoc.category}</span>
-              </div>
-              <div className="flex items-center justify-between text-slate-300">
-                <span className="text-slate-400">Target Grade:</span>
-                <span className="font-bold text-emerald-400">{previewingDoc.targetGrade}</span>
-              </div>
-              <div className="flex items-center justify-between text-slate-300">
-                <span className="text-slate-400">Published By:</span>
-                <span className="font-bold text-amber-300">{previewingDoc.sharedBy}</span>
-              </div>
-              {previewingDoc.notes && (
-                <div className="pt-2 border-t border-slate-800 text-slate-300">
-                  <span className="text-slate-400 block text-[10px] uppercase font-bold mb-1">Administrative Notes:</span>
-                  <p className="text-[11px] leading-relaxed bg-slate-900 p-2 rounded-xl border border-slate-800">{previewingDoc.notes}</p>
-                </div>
-              )}
-            </div>
-
-            <div className="flex gap-2 pt-2">
-              <button
-                onClick={() => {
-                  setLessonPlanText(
-                    `[COPIED FROM ${previewingDoc.title}]\nCategory: ${previewingDoc.category}\nTarget: ${previewingDoc.targetGrade}\nNotes: ${previewingDoc.notes || ''}\n\nObjectives:\n1. Complete CBC outcomes according to official administration guidelines.`
-                  );
-                  setPreviewingDoc(null);
-                  showToast(`Document "${previewingDoc.title}" copied to Lesson Plan editor! 📝`);
-                }}
-                className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow"
-              >
-                <Copy className="w-4 h-4" />
-                <span>Copy into Lesson Plan</span>
-              </button>
-
-              <button
-                onClick={() => {
-                  showToast(`Opening / Downloading ${previewingDoc.fileName}... 📄`);
-                }}
-                className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
-              >
-                <Download className="w-4 h-4" />
-                <span>Download PDF</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* =======================================================================
           EDIT LESSON PERIOD MODAL (KEY IN DETAILS)
           ======================================================================= */}
       {editingLesson && (
@@ -3403,110 +3115,6 @@ export function TeachersPortal({
                     className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold focus:outline-none focus:border-blue-500"
                   />
                 </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                <div>
-                  <label className="text-[10px] font-bold text-slate-300 uppercase block mb-1">
-                    Strand
-                  </label>
-                  <input
-                    type="text"
-                    value={editingLesson.schemeExtract.strand}
-                    onChange={(e) =>
-                      setEditingLesson({
-                        ...editingLesson,
-                        schemeExtract: {
-                          ...editingLesson.schemeExtract,
-                          strand: e.target.value
-                        }
-                      })
-                    }
-                    placeholder="Key in Strand..."
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-bold text-slate-300 uppercase block mb-1">
-                    Sub-Strand
-                  </label>
-                  <input
-                    type="text"
-                    value={editingLesson.schemeExtract.subStrand}
-                    onChange={(e) =>
-                      setEditingLesson({
-                        ...editingLesson,
-                        schemeExtract: {
-                          ...editingLesson.schemeExtract,
-                          subStrand: e.target.value
-                        }
-                      })
-                    }
-                    placeholder="Key in Sub-Strand..."
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[10px] font-bold text-slate-300 uppercase block mb-1">
-                  Specific Learning Outcomes
-                </label>
-                <textarea
-                  rows={2}
-                  value={editingLesson.schemeExtract.learningOutcomes.join('\n')}
-                  onChange={(e) =>
-                    setEditingLesson({
-                      ...editingLesson,
-                      schemeExtract: {
-                        ...editingLesson.schemeExtract,
-                        learningOutcomes: e.target.value.split('\n').filter(Boolean)
-                      }
-                    })
-                  }
-                  placeholder="Key in learning outcomes (one per line)..."
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white focus:outline-none focus:border-blue-500 leading-relaxed"
-                />
-              </div>
-
-              <div>
-                <label className="text-[10px] font-bold text-slate-300 uppercase block mb-1">
-                  Key Inquiry Question (KIQ)
-                </label>
-                <input
-                  type="text"
-                  value={editingLesson.lessonPlan.keyInquiryQuestions[0] || ''}
-                  onChange={(e) =>
-                    setEditingLesson({
-                      ...editingLesson,
-                      lessonPlan: {
-                        ...editingLesson.lessonPlan,
-                        keyInquiryQuestions: [e.target.value]
-                      }
-                    })
-                  }
-                  placeholder="e.g. How does this concept apply in our daily life?"
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="text-[10px] font-bold text-slate-300 uppercase block mb-1">
-                  Today&apos;s Class Notes / Chalkboard Summary
-                </label>
-                <textarea
-                  rows={3}
-                  value={editingLesson.classNotesSummary}
-                  onChange={(e) =>
-                    setEditingLesson({
-                      ...editingLesson,
-                      classNotesSummary: e.target.value
-                    })
-                  }
-                  placeholder="Key in chalkboard summary notes for learners..."
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white font-mono text-xs focus:outline-none focus:border-blue-500 leading-relaxed"
-                />
               </div>
 
               <div className="p-3 rounded-2xl bg-rose-950/40 border border-rose-800/60 space-y-2">
@@ -3715,83 +3323,6 @@ export function TeachersPortal({
                     className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold focus:outline-none focus:border-emerald-500"
                   />
                 </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                <div>
-                  <label className="text-[10px] font-bold text-slate-300 uppercase block mb-1">
-                    Strand
-                  </label>
-                  <input
-                    type="text"
-                    value={newLessonForm.strand}
-                    onChange={(e) =>
-                      setNewLessonForm({ ...newLessonForm, strand: e.target.value })
-                    }
-                    placeholder="Key in Strand..."
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-bold text-slate-300 uppercase block mb-1">
-                    Sub-Strand
-                  </label>
-                  <input
-                    type="text"
-                    value={newLessonForm.subStrand}
-                    onChange={(e) =>
-                      setNewLessonForm({ ...newLessonForm, subStrand: e.target.value })
-                    }
-                    placeholder="Key in Sub-Strand..."
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[10px] font-bold text-slate-300 uppercase block mb-1">
-                  Specific Learning Outcomes
-                </label>
-                <textarea
-                  rows={2}
-                  value={newLessonForm.outcomes}
-                  onChange={(e) =>
-                    setNewLessonForm({ ...newLessonForm, outcomes: e.target.value })
-                  }
-                  placeholder="Key in specific learning outcomes for learners..."
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-
-              <div>
-                <label className="text-[10px] font-bold text-slate-300 uppercase block mb-1">
-                  Key Inquiry Question (KIQ)
-                </label>
-                <input
-                  type="text"
-                  value={newLessonForm.kiq}
-                  onChange={(e) =>
-                    setNewLessonForm({ ...newLessonForm, kiq: e.target.value })
-                  }
-                  placeholder="e.g. Why is this important in daily life?"
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-
-              <div>
-                <label className="text-[10px] font-bold text-slate-300 uppercase block mb-1">
-                  Today&apos;s Class Notes Summary
-                </label>
-                <textarea
-                  rows={2}
-                  value={newLessonForm.classNotes}
-                  onChange={(e) =>
-                    setNewLessonForm({ ...newLessonForm, classNotes: e.target.value })
-                  }
-                  placeholder="Chalkboard notes for pupils to copy..."
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white font-mono text-xs focus:outline-none focus:border-emerald-500"
-                />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -4047,7 +3578,7 @@ export function TeachersPortal({
                       </div>
                       <div className="text-[10px] text-slate-400">
                         {isOnline
-                          ? 'All marks and schemes saved automatically.'
+                          ? 'All attendance and marks synced automatically.'
                           : 'Working offline. Local changes stored in device memory.'}
                       </div>
                     </div>
