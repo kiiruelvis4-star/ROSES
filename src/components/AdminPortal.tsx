@@ -52,7 +52,7 @@ import {
   Share2
 } from 'lucide-react';
 import { Logo } from './Logo.tsx';
-import { dataLayer } from '../services/dataLayer.ts';
+import { dataLayer, quickHashSecret } from '../services/dataLayer.ts';
 import { Camera, Image as ImageIcon } from 'lucide-react';
 import { TeacherAdminConsole } from './TeacherAdminConsole.tsx';
 import {
@@ -793,6 +793,18 @@ export function AdminPortal({ mode = 'phone', onBackToPortals, onSwitchToTeacher
     const nextList = [newTeacher, ...teachers];
     setTeachers(nextList);
     saveRegisteredTeachers(nextList);
+    try {
+      dataLayer.addTeacher({
+        name: newTeacher.name,
+        phone: newTeacher.phone,
+        passwordHash: quickHashSecret(newTeacherPassword),
+        assignedGrades: newTeacherGrades,
+        tier,
+        subjects: newTeacher.subjects,
+        isDualAdmin: newTeacherIsDualAdmin,
+        avatarUrl: newTeacherAvatar,
+      }).catch(() => {});
+    } catch {}
     setShowAddTeacherModal(false);
     setNewTeacherName('');
     setNewTeacherPhone('');
@@ -882,7 +894,22 @@ export function AdminPortal({ mode = 'phone', onBackToPortals, onSwitchToTeacher
       academicStanding: 'On Track'
     };
 
-    setPupils([...pupils, pupil]);
+    const updatedPupils = [...pupils, pupil];
+    setPupils(updatedPupils);
+    try {
+      localStorage.setItem('lra_office_pupils', JSON.stringify(updatedPupils));
+      dataLayer.addPupil({
+        name: pupil.name,
+        gender: pupil.gender,
+        grade: pupil.grade,
+        upi: pupil.upi,
+        parentName: pupil.parentName,
+        parentPhone: pupil.parentPhone,
+        pinHash: quickHashSecret(pupil.pin),
+        status: 'Active',
+        parentPassword: pupil.parentPassword,
+      }).catch(() => {});
+    } catch {}
     setNewPupilName('');
     setNewParentName('');
     setNewParentPhone('');
@@ -927,6 +954,7 @@ export function AdminPortal({ mode = 'phone', onBackToPortals, onSwitchToTeacher
       showToast('No valid rows found to commit');
       return;
     }
+
     const newPupilsList: PupilRecord[] = validRows.map((r, idx) => {
       const nextSeq = String(pupils.length + idx + 50).padStart(4, '0');
       return {
@@ -944,7 +972,24 @@ export function AdminPortal({ mode = 'phone', onBackToPortals, onSwitchToTeacher
       };
     });
 
-    setPupils([...pupils, ...newPupilsList]);
+    const combinedPupils = [...pupils, ...newPupilsList];
+    setPupils(combinedPupils);
+    try {
+      localStorage.setItem('lra_office_pupils', JSON.stringify(combinedPupils));
+      newPupilsList.forEach((p) => {
+        dataLayer.addPupil({
+          name: p.name,
+          gender: p.gender,
+          grade: p.grade,
+          upi: p.upi,
+          parentName: p.parentName,
+          parentPhone: p.parentPhone,
+          pinHash: quickHashSecret(p.pin),
+          status: 'Active',
+          parentPassword: p.parentPassword,
+        }).catch(() => {});
+      });
+    } catch {}
     setBulkCsvText('');
     setBulkPreviewRows([]);
     showToast(`Admitted ${newPupilsList.length} pupils in bulk successfully!`);

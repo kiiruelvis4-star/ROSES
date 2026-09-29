@@ -18,7 +18,7 @@ import { dataLayer, subscribeToDataLayer } from '../services/dataLayer.ts';
 import { Camera } from 'lucide-react';
 
 interface LogoProps {
-  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'splash';
   showTagline?: boolean;
   allowPhotoUpload?: boolean;
   className?: string;
@@ -59,6 +59,7 @@ export const Logo: React.FC<LogoProps> = ({
     md: { emblem: 'w-16 h-16', text: 'text-sm font-extrabold', tagline: 'text-[10px]' },
     lg: { emblem: 'w-28 h-28', text: 'text-base font-extrabold', tagline: 'text-xs' },
     xl: { emblem: 'w-40 h-40', text: 'text-xl font-black', tagline: 'text-sm' },
+    splash: { emblem: 'w-40 h-40 sm:w-52 sm:h-52 md:w-56 md:h-56', text: 'text-xl sm:text-2xl font-black', tagline: 'text-xs sm:text-sm font-bold' },
   }[size];
 
   return (

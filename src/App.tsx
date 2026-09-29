@@ -228,14 +228,14 @@ export default function App() {
       </nav>
 
       {/* Main Viewport Container */}
-      <main className="w-full flex-1 flex items-center justify-center p-0">
+      <main className={`w-full flex-1 flex items-center justify-center ${deviceMode === 'full' ? 'p-0 h-[calc(100vh-2.75rem)]' : 'p-2 sm:p-4'}`}>
         <div
           className={`overflow-hidden flex flex-col relative transition-all duration-300 ${
             deviceMode === 'phone'
               ? 'h-[85vh] max-h-[820px] aspect-[9/19.5] max-w-[94vw] bg-[#070D1E] shadow-[0_20px_60px_rgba(0,0,0,0.9)] rounded-3xl border border-slate-800/60'
               : deviceMode === 'tablet'
               ? 'h-[85vh] max-h-[820px] aspect-[3/4] max-w-[94vw] bg-[#070D1E] shadow-[0_20px_60px_rgba(0,0,0,0.9)] rounded-2xl border border-slate-800/60'
-              : 'w-full h-screen min-h-screen bg-[#070D1E]'
+              : 'w-full h-full flex-1 bg-[#070D1E]'
           }`}
         >
           {/* STEP 1 SCREENS */}
@@ -249,6 +249,7 @@ export default function App() {
           {screen === 'splash2' && (
             <Splash2
               key={`s2_${replayCount}`}
+              mode={deviceMode}
               onComplete={() => setScreen('portals')}
             />
           )}

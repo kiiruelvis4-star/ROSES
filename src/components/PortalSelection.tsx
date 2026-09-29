@@ -5,11 +5,12 @@
  * "portal selection with four cards: School Administration, Staff & Teachers, Parents & Guardians, Learners."
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Logo } from './Logo.tsx';
 import { ConnectionPill } from './ConnectionPill.tsx';
 import { PWAInstallButton } from './PWAInstallButton.tsx';
-import { Building2, GraduationCap, Users, Sparkles, ChevronRight, ShieldCheck, Camera } from 'lucide-react';
+import { SplashCustomizerModal } from './SplashCustomizerModal.tsx';
+import { Building2, GraduationCap, Users, Sparkles, ChevronRight, ShieldCheck, SlidersHorizontal } from 'lucide-react';
 
 export type PortalType = 'admin' | 'teachers' | 'parents' | 'learners';
 
@@ -19,6 +20,7 @@ interface PortalSelectionProps {
 }
 
 export const PortalSelection: React.FC<PortalSelectionProps> = ({ onSelectPortal, onOpenPhotoManager }) => {
+  const [isCustomizerOpen, setIsCustomizerOpen] = useState(false);
   const portals = [
     {
       id: 'admin' as PortalType,
@@ -77,15 +79,14 @@ export const PortalSelection: React.FC<PortalSelectionProps> = ({ onSelectPortal
           </span>
         </div>
         <div className="flex items-center gap-2">
-          {onOpenPhotoManager && (
-            <button
-              onClick={onOpenPhotoManager}
-              className="p-1.5 rounded-full bg-slate-900 hover:bg-slate-800 text-amber-400 border border-slate-700 transition"
-              title="Change Background Photo or Logo"
-            >
-              <Camera className="w-3.5 h-3.5" />
-            </button>
-          )}
+          <button
+            onClick={() => setIsCustomizerOpen(true)}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-900 hover:bg-slate-800 text-amber-400 border border-slate-700 text-xs font-semibold shadow transition active:scale-95 cursor-pointer"
+            title="Customize Splash Screens & Photos"
+          >
+            <SlidersHorizontal className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Customize</span>
+          </button>
           <PWAInstallButton compact />
           <ConnectionPill />
         </div>
@@ -146,6 +147,12 @@ export const PortalSelection: React.FC<PortalSelectionProps> = ({ onSelectPortal
           Little Roses Academy • Offline Capable PWA
         </div>
       </div>
+
+      <SplashCustomizerModal
+        isOpen={isCustomizerOpen}
+        onClose={() => setIsCustomizerOpen(false)}
+        initialTab="splash3"
+      />
     </div>
   );
 };

@@ -105,6 +105,7 @@ export const SUBJECT_COLORS: Record<string, { bg: string; text: string; border: 
   'Shughuli za Kiswahili': { bg: '#FFF7ED', text: '#9A3412', border: '#FED7AA', accent: '#EA580C', emoji: '🗣️' },
   'Environmental Activities': { bg: '#ECFEFF', text: '#164E63', border: '#A5F3FC', accent: '#0891B2', emoji: '🌍' },
   'CRE': { bg: '#FAF5FF', text: '#581C87', border: '#E9D5FF', accent: '#9333EA', emoji: '🙏' },
+  'CRE Activities': { bg: '#FAF5FF', text: '#581C87', border: '#E9D5FF', accent: '#9333EA', emoji: '🙏' },
   'Creative Activities': { bg: '#FDF2F8', text: '#831843', border: '#FBCFE8', accent: '#DB2777', emoji: '🎨' },
 
   // Upper Primary (Grades 4-6)
@@ -116,6 +117,39 @@ export const SUBJECT_COLORS: Record<string, { bg: string; text: string; border: 
   'Social Studies': { bg: '#F1F5F9', text: '#334155', border: '#CBD5E1', accent: '#64748B', emoji: '🗺️' },
   'Creative Arts & Sports': { bg: '#FDF2F8', text: '#831843', border: '#FBCFE8', accent: '#DB2777', emoji: '⚽' },
 };
+
+export const LOWER_PRIMARY_SUBJECTS = [
+  'Mathematical Activities',
+  'English Language Activities',
+  'Shughuli za Kiswahili',
+  'Environmental Activities',
+  'CRE Activities',
+  'Creative Activities',
+] as const;
+
+export const UPPER_PRIMARY_SUBJECTS = [
+  'Mathematics',
+  'English',
+  'Kiswahili',
+  'Science & Technology',
+  'Agriculture & Nutrition',
+  'Social Studies',
+  'CRE',
+  'Creative Arts & Sports',
+] as const;
+
+export function getSubjectsForGrade(grade: string): string[] {
+  const clean = grade.trim();
+  if (clean === 'Grade 1' || clean === 'Grade 2' || clean === 'Grade 3') {
+    return [...LOWER_PRIMARY_SUBJECTS];
+  }
+  return [...UPPER_PRIMARY_SUBJECTS];
+}
+
+export function isLowerPrimaryGrade(grade: string): boolean {
+  const clean = grade.trim();
+  return clean === 'Grade 1' || clean === 'Grade 2' || clean === 'Grade 3';
+}
 
 // TEACHER ASSIGNED PALETTES
 const TEACHER_PALETTE = [
