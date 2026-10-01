@@ -14,7 +14,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { dataLayer, subscribeToDataLayer } from '../services/dataLayer.ts';
+import { phase0Storage } from '../services/phase0Storage.ts';
 import { Camera } from 'lucide-react';
 
 interface LogoProps {
@@ -30,12 +30,12 @@ export const Logo: React.FC<LogoProps> = ({
   allowPhotoUpload = false,
   className = '',
 }) => {
-  const [attachedLogo, setAttachedLogo] = useState<string | null>(dataLayer.getAttachedLogo());
+  const [attachedLogo, setAttachedLogo] = useState<string | null>(phase0Storage.getAttachedLogo());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    return subscribeToDataLayer(() => {
-      setAttachedLogo(dataLayer.getAttachedLogo());
+    return phase0Storage.subscribe(() => {
+      setAttachedLogo(phase0Storage.getAttachedLogo());
     });
   }, []);
 
@@ -46,7 +46,7 @@ export const Logo: React.FC<LogoProps> = ({
       reader.onload = (event) => {
         const result = event.target?.result as string;
         if (result) {
-          dataLayer.setAttachedLogo(result);
+          phase0Storage.setAttachedLogo(result);
         }
       };
       reader.readAsDataURL(file);
