@@ -1,1 +1,278 @@
 @import "tailwindcss";
+
+/* ==========================================================================
+   LITTLE ROSES ACADEMY - OFFICIAL APPEARANCE SYSTEM
+   Light Mode • Dark Mode • System Default
+   Preserves Little Roses Identity, Kenyan CBC Subject Colours & Crest Logo
+   Splash Screens are strictly exempted and never redesigned.
+   ========================================================================== */
+
+:root {
+  color-scheme: dark;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+}
+
+/* --- Font scale settings --- */
+[data-font-scale="small"] {
+  font-size: 13.5px;
+}
+[data-font-scale="large"] {
+  font-size: 15.5px;
+}
+
+/* ==========================================================================
+   LIGHT MODE OVERRIDES
+   ========================================================================== */
+
+[data-theme="light"] body,
+[data-theme="light"] #root {
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+/* Application background containers (excluding splash screen) */
+[data-theme="light"] :not([data-splash="true"]):not([data-splash="true"] *).bg-\[\#070D1E\],
+[data-theme="light"] :not([data-splash="true"]):not([data-splash="true"] *).bg-\[\#080E24\],
+[data-theme="light"] :not([data-splash="true"]):not([data-splash="true"] *).bg-\[\#0B152E\] {
+  background-color: #f8fafc !important;
+}
+
+[data-theme="light"] :not([data-splash="true"]):not([data-splash="true"] *).bg-\[\#070D1E\]\/95,
+[data-theme="light"] :not([data-splash="true"]):not([data-splash="true"] *).bg-\[\#070D1E\]\/90,
+[data-theme="light"] :not([data-splash="true"]):not([data-splash="true"] *).bg-\[\#070D1E\]\/80 {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+}
+
+/* Cards & primary panel surfaces */
+[data-theme="light"] :not([data-splash="true"]):not([data-splash="true"] *).bg-slate-900 {
+  background-color: #ffffff !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="light"] :not([data-splash="true"]):not([data-splash="true"] *).bg-slate-900\/60,
+[data-theme="light"] :not([data-splash="true"]):not([data-splash="true"] *).bg-slate-900\/70,
+[data-theme="light"] :not([data-splash="true"]):not([data-splash="true"] *).bg-slate-900\/80,
+[data-theme="light"] :not([data-splash="true"]):not([data-splash="true"] *).bg-slate-900\/95 {
+  background-color: rgba(255, 255, 255, 0.92) !important;
+}
+
+/* Secondary inset panels & inner wells */
+[data-theme="light"] :not([data-splash="true"]):not([data-splash="true"] *).bg-slate-950 {
+  background-color: #f8fafc !important;
+}
+
+[data-theme="light"] :not([data-splash="true"]):not([data-splash="true"] *).bg-slate-950\/90,
+[data-theme="light"] :not([data-splash="true"]):not([data-splash="true"] *).bg-slate-950\/80,
+[data-theme="light"] :not([data-splash="true"]):not([data-splash="true"] *).bg-slate-950\/60,
+[data-theme="light"] :not([data-splash="true"]):not([data-splash="true"] *).bg-slate-950\/40 {
+  background-color: rgba(248, 250, 252, 0.9) !important;
+}
+
+/* Tertiary boxes & secondary buttons */
+[data-theme="light"] :not([data-splash="true"]):not([data-splash="true"] *).bg-slate-800 {
+  background-color: #f1f5f9 !important;
+}
+
+[data-theme="light"] :not([data-splash="true"]):not([data-splash="true"] *).hover\:bg-slate-800:hover,
+[data-theme="light"] :not([data-splash="true"]):not([data-splash="true"] *).hover\:bg-slate-900:hover {
+  background-color: #e2e8f0 !important;
+}
+
+[data-theme="light"] :not([data-splash="true"]):not([data-splash="true"] *).hover\:bg-slate-700:hover {
+  background-color: #cbd5e1 !important;
+}
+
+/* Borders */
+[data-theme="light"] :not([data-splash="true"]):not([data-splash="true"] *).border-slate-800,
+[data-theme="light"] :not([data-splash="true"]):not([data-splash="true"] *).border-slate-800\/80,
+[data-theme="light"] :not([data-splash="true"]):not([data-splash="true"] *).border-slate-800\/90 {
+  border-color: #e2e8f0 !important;
+}
+
+[data-theme="light"] :not([data-splash="true"]):not([data-splash="true"] *).border-slate-700,
+[data-theme="light"] :not([data-splash="true"]):not([data-splash="true"] *).border-slate-700\/60,
+[data-theme="light"] :not([data-splash="true"]):not([data-splash="true"] *).border-slate-700\/80 {
+  border-color: #cbd5e1 !important;
+}
+
+[data-theme="light"] :not([data-splash="true"]):not([data-splash="true"] *).divide-slate-800 > :not([hidden]) ~ :not([hidden]),
+[data-theme="light"] :not([data-splash="true"]):not([data-splash="true"] *).divide-slate-800\/80 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #e2e8f0 !important;
+}
+
+/* Typography in Light Mode (retaining white text on colored CTA buttons) */
+[data-theme="light"] :not([data-splash="true"]):not([data-splash="true"] *):not(button.bg-amber-500 *):not(button.bg-amber-400 *):not(button.bg-blue-600 *):not(button.bg-emerald-600 *):not(button.bg-rose-600 *):not(button.bg-rose-500 *):not(button.bg-purple-600 *):not(.bg-rose-500 *):not(.bg-rose-600 *):not(.bg-blue-600 *):not(.bg-emerald-600 *):not(.bg-amber-500 *):not([data-keep-white]):not([data-keep-white] *).text-white {
+  color: #0f172a !important;
+}
+
+[data-theme="light"] :not([data-splash="true"]):not([data-splash="true"] *):not([data-keep-white]):not([data-keep-white] *).text-neutral-100 {
+  color: #0f172a !important;
+}
+
+[data-theme="light"] :not([data-splash="true"]):not([data-splash="true"] *).text-slate-200 {
+  color: #1e293b !important;
+}
+
+[data-theme="light"] :not([data-splash="true"]):not([data-splash="true"] *).text-slate-300 {
+  color: #334155 !important;
+}
+
+[data-theme="light"] :not([data-splash="true"]):not([data-splash="true"] *).text-slate-400 {
+  color: #475569 !important;
+}
+
+[data-theme="light"] :not([data-splash="true"]):not([data-splash="true"] *).text-slate-500 {
+  color: #64748b !important;
+}
+
+/* Amber button and CTA text: always keep dark slate-950 for high contrast */
+[data-theme="light"] .text-slate-950 {
+  color: #020617 !important;
+}
+
+/* Form inputs & controls */
+[data-theme="light"] input:not([type="checkbox"]):not([type="radio"]),
+[data-theme="light"] textarea,
+[data-theme="light"] select {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+[data-theme="light"] input::placeholder,
+[data-theme="light"] textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Header, Drawer & Bottom Navigation */
+[data-theme="light"] header {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  border-bottom-color: #e2e8f0 !important;
+  color: #0f172a !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05) !important;
+}
+
+[data-theme="light"] nav[aria-label="Bottom Navigation"] {
+  background-color: #ffffff !important;
+  border-top-color: #e2e8f0 !important;
+  box-shadow: 0 -1px 3px 0 rgba(0, 0, 0, 0.05) !important;
+}
+
+[data-theme="light"] nav[aria-label="Bottom Navigation"] button:not(.text-amber-400) {
+  color: #64748b !important;
+}
+
+[data-theme="light"] nav[aria-label="Bottom Navigation"] button.text-amber-400 {
+  color: #d97706 !important;
+}
+
+/* --- CBC Kenyan Subject Badges in Light Mode --- */
+[data-theme="light"] .bg-blue-500\/10 {
+  background-color: #eff6ff !important;
+}
+[data-theme="light"] .border-blue-500\/30 {
+  border-color: #bfdbfe !important;
+}
+[data-theme="light"] .text-blue-400 {
+  color: #2563eb !important;
+}
+
+[data-theme="light"] .bg-purple-500\/10 {
+  background-color: #faf5ff !important;
+}
+[data-theme="light"] .border-purple-500\/30 {
+  border-color: #e9d5ff !important;
+}
+[data-theme="light"] .text-purple-400 {
+  color: #7c3aed !important;
+}
+
+[data-theme="light"] .bg-emerald-500\/10 {
+  background-color: #ecfdf5 !important;
+}
+[data-theme="light"] .border-emerald-500\/30 {
+  border-color: #a7f3d0 !important;
+}
+[data-theme="light"] .text-emerald-400 {
+  color: #059669 !important;
+}
+
+[data-theme="light"] .bg-teal-500\/10 {
+  background-color: #f0fdfa !important;
+}
+[data-theme="light"] .border-teal-500\/30 {
+  border-color: #99f6e4 !important;
+}
+[data-theme="light"] .text-teal-400 {
+  color: #0d9488 !important;
+}
+
+[data-theme="light"] .bg-cyan-500\/10 {
+  background-color: #ecfeff !important;
+}
+[data-theme="light"] .border-cyan-500\/30 {
+  border-color: #a5f3fc !important;
+}
+[data-theme="light"] .text-cyan-400 {
+  color: #0891b2 !important;
+}
+
+[data-theme="light"] .bg-amber-500\/10 {
+  background-color: #fffbeb !important;
+}
+[data-theme="light"] .border-amber-500\/30 {
+  border-color: #fde68a !important;
+}
+[data-theme="light"] .text-amber-400 {
+  color: #d97706 !important;
+}
+
+[data-theme="light"] .bg-rose-500\/10 {
+  background-color: #fff1f2 !important;
+}
+[data-theme="light"] .border-rose-500\/30 {
+  border-color: #fecdd3 !important;
+}
+[data-theme="light"] .text-rose-400 {
+  color: #e11d48 !important;
+}
+
+/* --- Performance Bands (EE, ME, AE, BE) in Light Mode --- */
+[data-theme="light"] .bg-emerald-500\/20 {
+  background-color: #d1fae5 !important;
+  border-color: #6ee7b7 !important;
+}
+[data-theme="light"] .bg-blue-500\/20 {
+  background-color: #dbeafe !important;
+  border-color: #93c5fd !important;
+}
+[data-theme="light"] .bg-amber-500\/20 {
+  background-color: #fef3c7 !important;
+  border-color: #fcd34d !important;
+}
+[data-theme="light"] .bg-rose-500\/20 {
+  background-color: #ffe4e6 !important;
+  border-color: #fda4af !important;
+}
+
+/* ==========================================================================
+   STRICT EXEMPTION: SPLASH SCREENS
+   "Do not redesign the splash screen."
+   Keeps Little Roses iconic midnight navy splash intact in both modes.
+   ========================================================================== */
+[data-splash="true"],
+.splash-screen {
+  background-color: #070d1e !important;
+  color: #ffffff !important;
+}
+
+[data-splash="true"] * {
+  color: inherit;
+}
