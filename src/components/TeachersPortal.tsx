@@ -955,6 +955,17 @@ export function TeachersPortal({
     return getTeacherGradeAssignments(currentTeacher as any);
   }, [currentTeacher]);
 
+  // Real-time count of resources dispatched to this teacher
+  const teacherResourcesCount = useMemo(() => {
+    if (!currentTeacher?.id) return 0;
+    try {
+      const pkgs = dataLayer.getResourcePackages(currentTeacher.id);
+      return pkgs.reduce((acc, p) => acc + (p.documents?.length || 1), 0);
+    } catch {
+      return 0;
+    }
+  }, [currentTeacher?.id]);
+
   // Explicit grades assigned to this teacher ONLY
   const assignedGradesList = useMemo(() => {
     if (teacherGradeAssignments.length > 0) {
@@ -1704,6 +1715,19 @@ export function TeachersPortal({
 
         {/* Right: Quick School Office Access + Profile & Settings Button */}
         <div className="flex items-center gap-2">
+          {/* Quick Curriculum Resources Access */}
+          {teacherResourcesCount > 0 && (
+            <button
+              onClick={() => setActiveTab('resources')}
+              className="px-2.5 py-1.5 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95"
+              title={`${teacherResourcesCount} curriculum resource(s) allocated to your portal`}
+            >
+              <FolderOpen className="w-3.5 h-3.5 text-cyan-400" />
+              <span>{teacherResourcesCount}</span>
+              <span className="hidden sm:inline">Resources</span>
+            </button>
+          )}
+
           {/* Quick Leadership Switcher for Elvis & Kelvin */}
           {currentTeacher.isDualAdmin && (
             <button
@@ -2518,6 +2542,37 @@ export function TeachersPortal({
               </div>
             </div>
 
+            {/* Real-Time Dispatched Curriculum Resources Alert */}
+            {teacherResourcesCount > 0 && (
+              <div className="p-3.5 rounded-2xl bg-cyan-500/10 border-2 border-cyan-400/80 text-white text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg animate-fadeIn">
+                <div className="flex items-start gap-2.5">
+                  <div className="w-8 h-8 rounded-full bg-cyan-400 text-neutral-950 font-black flex items-center justify-center flex-shrink-0 text-sm">
+                    <FolderOpen className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="font-extrabold text-xs text-cyan-300 flex items-center gap-1.5">
+                      <span>Curriculum Resources Allocated</span>
+                      <span className="text-[10px] bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 px-2 py-0.5 rounded-full font-mono font-bold">
+                        {teacherResourcesCount} {teacherResourcesCount === 1 ? 'Document' : 'Documents'} Available
+                      </span>
+                    </h4>
+                    <p className="text-[11px] text-slate-300 mt-0.5">
+                      Schemes of work, lesson notes, CATs, and CBC resources dispatched to your teacher portal.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('resources')}
+                  className="px-3.5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs shadow-md cursor-pointer transition-all flex items-center gap-1.5 self-end sm:self-auto shrink-0"
+                >
+                  <FolderOpen className="w-3.5 h-3.5" />
+                  <span>Open Resources Studio</span>
+                </button>
+              </div>
+            )}
+
             {/* Teacher CAT Submission Notice & Offline-First Low-Bandwidth Indicator */}
             <div className="p-3.5 rounded-2xl bg-amber-500/10 border-2 border-amber-400 text-white text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg">
               <div className="flex items-start gap-2.5">
@@ -2970,7 +3025,7 @@ export function TeachersPortal({
         {[
           { id: 'timetable', label: 'Timetable', icon: Calendar },
           { id: 'classes', label: 'My Classes', icon: Users },
-          { id: 'resources', label: 'Resources', icon: FolderOpen },
+          { id: 'resources', label: 'Resources', icon: FolderOpen, badge: teacherResourcesCount > 0 ? teacherResourcesCount : undefined },
           { id: 'assessments', label: 'Assessments', icon: ClipboardList },
           { id: 'messages', label: 'Messages', icon: MessageSquare, badge: 2 }
         ].map((tab) => {
@@ -4157,6 +4212,7 @@ export function TeachersPortal({
             id: 'resources',
             label: 'Resources & Schemes',
             icon: '📁',
+            badge: teacherResourcesCount > 0 ? `${teacherResourcesCount} files` : undefined,
             active: activeTab === 'resources',
             onClick: () => setActiveTab('resources'),
           },

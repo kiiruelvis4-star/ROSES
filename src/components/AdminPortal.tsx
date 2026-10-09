@@ -99,6 +99,8 @@ import { AdminTimetableModule } from './AdminTimetableModule.tsx';
 import { AdminPromotionModule } from './AdminPromotionModule.tsx';
 import { AdminSettingsModule } from './AdminSettingsModule.tsx';
 import { AdminAssessmentPortal } from './AdminAssessmentPortal.tsx';
+import { OfflineAIDocumentAssistantModal } from './OfflineAIDocumentAssistantModal.tsx';
+import { extractTextFromFile } from '../services/aiDocumentAssistant.ts';
 import {
   TeacherModal,
   LearnerModal,
@@ -269,6 +271,7 @@ export function AdminPortal({ onBackToPortals }: AdminPortalProps) {
   const [activeWorkspaceResource, setActiveWorkspaceResource] = useState<WorkspaceResourceItem | null>(null);
   const [resourcesRevision, setResourcesRevision] = useState(0);
   const [isAddingResource, setIsAddingResource] = useState(false);
+  const [showAIAssistantModal, setShowAIAssistantModal] = useState(false);
   const [treeExpandedTeachers, setTreeExpandedTeachers] = useState<string[]>([]);
   const [treeExpandedGrades, setTreeExpandedGrades] = useState<string[]>([]);
   const [showResourceTree, setShowResourceTree] = useState(true);
@@ -966,48 +969,50 @@ export function AdminPortal({ onBackToPortals }: AdminPortalProps) {
     const categoryObj = RESOURCE_CATEGORIES.find((c) => c.id === selectedResourceCategory);
     const categoryName = categoryObj?.name || 'Other School Documents';
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const result = event.target?.result;
-      if (!result) {
-        setUploadStatusBanner({
-          message: 'Upload Failed: Unable to read file content.',
-          type: 'error',
-        });
-        setTimeout(() => setUploadStatusBanner(null), 5000);
-        return;
-      }
+    // Extract text offline via AI assistant engine
+    extractTextFromFile(file).then(({ text }) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const result = event.target?.result;
+        if (!result) {
+          setUploadStatusBanner({
+            message: 'Upload Failed: Unable to read file content.',
+            type: 'error',
+          });
+          setTimeout(() => setUploadStatusBanner(null), 5000);
+          return;
+        }
 
-      let detectedType = 'document';
-      const ext = file.name.split('.').pop()?.toLowerCase() || '';
-      if (['xlsx', 'xls', 'csv'].includes(ext)) detectedType = 'spreadsheet';
-      else if (['pdf'].includes(ext)) detectedType = 'pdf';
-      else if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(ext)) detectedType = 'image';
-      else if (['mp4', 'webm', 'mov', 'm4v', 'avi'].includes(ext)) detectedType = 'video';
-      else if (['txt', 'md', 'log'].includes(ext)) detectedType = 'text';
+        let detectedType = 'document';
+        const ext = file.name.split('.').pop()?.toLowerCase() || '';
+        if (['xlsx', 'xls', 'csv'].includes(ext)) detectedType = 'spreadsheet';
+        else if (['pdf'].includes(ext)) detectedType = 'pdf';
+        else if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(ext)) detectedType = 'image';
+        else if (['mp4', 'webm', 'mov', 'm4v', 'avi'].includes(ext)) detectedType = 'video';
+        else if (['txt', 'md', 'log'].includes(ext)) detectedType = 'text';
 
-      try {
-        dataLayer.addResourcePackage({
-          packageName: cleanPackageTitle,
-          category: categoryName,
-          grade: selectedResourceGrade,
-          subject: selectedResourceSubject,
-          academicYear: '2026',
-          term: 'Term 1',
-          recipientTeacherIds: [selectedResourceTeacherId],
-          documents: [
-            {
-              id: `doc_${Date.now()}`,
-              name: file.name,
-              content: isText && typeof result === 'string' ? result : undefined,
-              fileData: typeof result === 'string' ? result : undefined,
-              fileType: detectedType,
-              size: formatBytes(file.size),
-              sizeBytes: file.size,
-              versions: [],
-            },
-          ],
-        });
+        try {
+          dataLayer.addResourcePackage({
+            packageName: cleanPackageTitle,
+            category: categoryName,
+            grade: selectedResourceGrade,
+            subject: selectedResourceSubject,
+            academicYear: '2026',
+            term: 'Term 1',
+            recipientTeacherIds: [selectedResourceTeacherId],
+            documents: [
+              {
+                id: `doc_${Date.now()}`,
+                name: file.name,
+                content: text || (isText && typeof result === 'string' ? result : undefined),
+                fileData: typeof result === 'string' ? result : undefined,
+                fileType: detectedType,
+                size: formatBytes(file.size),
+                sizeBytes: file.size,
+                versions: [],
+              },
+            ],
+          });
 
         setResourcesRevision((r) => r + 1);
         setUploadStatusBanner({
@@ -1037,6 +1042,7 @@ export function AdminPortal({ onBackToPortals }: AdminPortalProps) {
     } else {
       reader.readAsDataURL(file);
     }
+    });
 
     e.target.value = '';
   };
@@ -6168,6 +6174,17 @@ export function AdminPortal({ onBackToPortals }: AdminPortalProps) {
 
                                           {/* Action Buttons */}
                                           <div className="flex flex-wrap items-center gap-2">
+                                            {/* Offline AI Assistant Button */}
+                                            <button
+                                              type="button"
+                                              onClick={() => setShowAIAssistantModal(true)}
+                                              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black text-xs transition cursor-pointer flex items-center gap-1.5 shadow-md shadow-cyan-500/20"
+                                              title="Launch Offline AI Document Assistant to read content and route documents"
+                                            >
+                                              <Sparkles className="w-3.5 h-3.5" />
+                                              <span>Offline AI Assistant</span>
+                                            </button>
+
                                             {/* Real Upload Button */}
                                             <button
                                               onClick={() => locationFileInputRef.current?.click()}
@@ -6832,6 +6849,27 @@ export function AdminPortal({ onBackToPortals }: AdminPortalProps) {
                                       className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-900 transition cursor-pointer"
                                     >
                                       <X className="w-4 h-4" />
+                                    </button>
+                                  </div>
+
+                                  {/* Offline AI recommendation banner */}
+                                  <div className="p-3 rounded-xl bg-cyan-950/40 border border-cyan-500/30 flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      <Sparkles className="w-4 h-4 text-cyan-400 shrink-0" />
+                                      <div className="text-[11px] text-cyan-200">
+                                        <p className="font-bold">Want Offline AI Auto-Routing?</p>
+                                        <p className="text-slate-400">Reads text & automatically syncs to teacher portals.</p>
+                                      </div>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setIsAddingResource(false);
+                                        setShowAIAssistantModal(true);
+                                      }}
+                                      className="px-2.5 py-1 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold shrink-0 transition cursor-pointer"
+                                    >
+                                      Use Offline AI
                                     </button>
                                   </div>
 
@@ -7889,6 +7927,26 @@ export function AdminPortal({ onBackToPortals }: AdminPortalProps) {
           </div>
         </div>
       )}
+      {/* OFFLINE AI DOCUMENT ASSISTANT MODAL */}
+      <OfflineAIDocumentAssistantModal
+        isOpen={showAIAssistantModal}
+        onClose={() => setShowAIAssistantModal(false)}
+        initialGrade={selectedResourceGrade || undefined}
+        initialSubject={selectedResourceSubject || undefined}
+        initialCategory={
+          RESOURCE_CATEGORIES.find((c) => c.id === selectedResourceCategory)?.name || undefined
+        }
+        initialTeacherId={selectedResourceTeacherId || undefined}
+        onDispatched={(pkg) => {
+          setShowAIAssistantModal(false);
+          setResourcesRevision((r) => r + 1);
+          setUploadStatusBanner({
+            message: `✓ Successfully dispatched "${pkg.packageName}" via Offline AI Assistant. Synchronized to teacher portals.`,
+            type: 'success',
+          });
+          setTimeout(() => setUploadStatusBanner(null), 6000);
+        }}
+      />
     </div>
   );
 }

@@ -14,6 +14,14 @@ import {
   FileUp,
   Printer,
   FileCheck,
+  Sparkles,
+  BookOpen,
+  Copy,
+  Check,
+  Search,
+  ShieldCheck,
+  Inbox,
+  ArrowRight,
 } from 'lucide-react';
 import {
   dataLayer,
@@ -22,6 +30,8 @@ import {
   ResourcePackageRecord,
   loadResourceFile,
 } from '../services/dataLayer.ts';
+import { extractTextFromFile, extractTextFromDataUrl } from '../services/aiDocumentAssistant.ts';
+import { OfflineAIDocumentAssistantModal } from './OfflineAIDocumentAssistantModal.tsx';
 import { formatBytes } from './AdminResourceWorkspace.tsx';
 
 export interface TeacherResourcesStudioProps {
@@ -88,6 +98,15 @@ export function TeacherResourcesStudio({
     fileType?: string;
   } | null>(null);
 
+  // Offline AI Assistant State
+  const [showAIAssistant, setShowAIAssistant] = useState(false);
+  const [previewViewTab, setPreviewViewTab] = useState<'content' | 'file'>('content');
+  const [isExtractingPreview, setIsExtractingPreview] = useState(false);
+  const [copiedPreviewText, setCopiedPreviewText] = useState(false);
+  const [previewSearchTerm, setPreviewSearchTerm] = useState('');
+  const [studioTab, setStudioTab] = useState<'category' | 'dispatched'>('category');
+  const [dispatchedSearchQuery, setDispatchedSearchQuery] = useState('');
+
   const teacherAssignments = useMemo(() => {
     return getTeacherGradeAssignments(currentTeacher as any);
   }, [currentTeacher]);
@@ -134,6 +153,143 @@ export function TeacherResourcesStudio({
     return TEACHER_CATEGORIES.find((c) => c.id === selectedCategory) || TEACHER_CATEGORIES[0];
   }, [selectedCategory]);
 
+  // Compute resource counts per category for active teacher
+  const categoryCounts = useMemo(() => {
+    try {
+      const pkgs = dataLayer.getResourcePackages(currentTeacher.id);
+      const counts: Record<string, number> = {};
+      TEACHER_CATEGORIES.forEach((c) => {
+        counts[c.id] = 0;
+      });
+      pkgs.forEach((pkg) => {
+        const pkgCat = pkg.category.toLowerCase().trim();
+        TEACHER_CATEGORIES.forEach((c) => {
+          const target = c.repoCategory.toLowerCase().trim();
+          if (
+            pkgCat === target ||
+            pkgCat.includes(c.id) ||
+            pkgCat.includes(c.title.toLowerCase()) ||
+            target.includes(pkgCat) ||
+            (c.id === 'schemes' && pkgCat.includes('scheme')) ||
+            (c.id === 'lesson_plans' && pkgCat.includes('lesson plan')) ||
+            (c.id === 'lesson_notes' && pkgCat.includes('lesson note')) ||
+            (c.id === 'class_notes' && pkgCat.includes('class note')) ||
+            (c.id === 'assignments' && pkgCat.includes('assignment')) ||
+            (c.id === 'cats_assessments' && (pkgCat.includes('cat') || pkgCat.includes('assessment'))) ||
+            (c.id === 'revision_exams' && (pkgCat.includes('revision') || pkgCat.includes('exam') || pkgCat.includes('paper'))) ||
+            (c.id === 'media_resources' && (pkgCat.includes('reading') || pkgCat.includes('story') || pkgCat.includes('media'))) ||
+            (c.id === 'knec_cbe' && (pkgCat.includes('curriculum') || pkgCat.includes('knec') || pkgCat.includes('cbe'))) ||
+            (c.id === 'records_of_work' && pkgCat.includes('record')) ||
+            (c.id === 'rubrics' && (pkgCat.includes('rubric') || pkgCat.includes('reference')))
+          ) {
+            counts[c.id] = (counts[c.id] || 0) + (pkg.documents?.length || 1);
+          }
+        });
+      });
+      return counts;
+    } catch {
+      return {};
+    }
+  }, [currentTeacher.id, revision]);
+
+  // Total resources dispatched to this teacher across all folders
+  const allDispatchedDocs = useMemo(() => {
+    try {
+      const pkgs = dataLayer.getResourcePackages(currentTeacher.id);
+      const list: Array<{
+        pkgId: string;
+        docId: string;
+        title: string;
+        fileName: string;
+        fileType: string;
+        size: string;
+        fileData?: string;
+        content?: string;
+        createdAt: string;
+        grade: string;
+        subject: string;
+        category: string;
+        strand?: string;
+      }> = [];
+
+      pkgs.forEach((pkg) => {
+        pkg.documents?.forEach((doc) => {
+          list.push({
+            pkgId: pkg.id,
+            docId: doc.id,
+            title: pkg.packageName || doc.name,
+            fileName: doc.name,
+            fileType: doc.fileType || detectFileType(doc.name, doc.fileData),
+            size: doc.size || (doc.sizeBytes ? formatBytes(doc.sizeBytes) : 'Document'),
+            fileData: doc.fileData,
+            content: doc.content,
+            createdAt: pkg.createdAt,
+            grade: pkg.grade,
+            subject: pkg.subject,
+            category: pkg.category,
+            strand: pkg.strand,
+          });
+        });
+      });
+      return list;
+    } catch {
+      return [];
+    }
+  }, [currentTeacher.id, revision]);
+
+  const findCategoryIdForPkg = (pkgCatRaw?: string): string => {
+    if (!pkgCatRaw) return 'schemes';
+    const clean = pkgCatRaw.toLowerCase().trim();
+    const matched = TEACHER_CATEGORIES.find((c) => {
+      const target = c.repoCategory.toLowerCase().trim();
+      return (
+        clean === target ||
+        clean.includes(c.id) ||
+        clean.includes(c.title.toLowerCase()) ||
+        target.includes(clean) ||
+        (c.id === 'schemes' && clean.includes('scheme')) ||
+        (c.id === 'lesson_plans' && clean.includes('lesson plan')) ||
+        (c.id === 'lesson_notes' && clean.includes('lesson note')) ||
+        (c.id === 'class_notes' && clean.includes('class note')) ||
+        (c.id === 'assignments' && clean.includes('assignment')) ||
+        (c.id === 'cats_assessments' && (clean.includes('cat') || clean.includes('assessment'))) ||
+        (c.id === 'revision_exams' && (clean.includes('revision') || clean.includes('exam') || clean.includes('paper'))) ||
+        (c.id === 'media_resources' && (clean.includes('reading') || clean.includes('story') || clean.includes('media'))) ||
+        (c.id === 'knec_cbe' && (clean.includes('curriculum') || clean.includes('knec') || clean.includes('cbe'))) ||
+        (c.id === 'records_of_work' && clean.includes('record')) ||
+        (c.id === 'rubrics' && (clean.includes('rubric') || clean.includes('reference')))
+      );
+    });
+    return matched?.id || 'schemes';
+  };
+
+  const filteredDispatchedDocs = useMemo(() => {
+    if (!dispatchedSearchQuery.trim()) return allDispatchedDocs;
+    const q = dispatchedSearchQuery.toLowerCase().trim();
+    return allDispatchedDocs.filter(
+      (d) =>
+        d.title.toLowerCase().includes(q) ||
+        d.fileName.toLowerCase().includes(q) ||
+        d.grade.toLowerCase().includes(q) ||
+        d.subject.toLowerCase().includes(q) ||
+        d.category.toLowerCase().includes(q) ||
+        (d.strand && d.strand.toLowerCase().includes(q))
+    );
+  }, [allDispatchedDocs, dispatchedSearchQuery]);
+
+  const handleGoToDocFolder = (doc: (typeof allDispatchedDocs)[0]) => {
+    if (doc.grade) {
+      setSelectedGrade(doc.grade);
+    }
+    if (doc.subject) {
+      setSelectedSubject(doc.subject);
+    }
+    const catId = findCategoryIdForPkg(doc.category);
+    setSelectedCategory(catId);
+    setStudioTab('category');
+    showToast(`Switched to ${doc.category} for ${doc.grade} • ${doc.subject}`);
+  };
+
   // Query documents matching active teacher, grade, subject, and category
   const activeDocuments = useMemo(() => {
     try {
@@ -160,10 +316,22 @@ export function TeacherResourcesStudio({
         const catMatch =
           pkgCat === targetRepoCat ||
           pkgCat.includes(activeCategoryObj.id) ||
-          pkgCat.includes(activeCategoryObj.title.toLowerCase());
+          pkgCat.includes(activeCategoryObj.title.toLowerCase()) ||
+          targetRepoCat.includes(pkgCat) ||
+          (activeCategoryObj.id === 'schemes' && pkgCat.includes('scheme')) ||
+          (activeCategoryObj.id === 'lesson_plans' && pkgCat.includes('lesson plan')) ||
+          (activeCategoryObj.id === 'lesson_notes' && pkgCat.includes('lesson note')) ||
+          (activeCategoryObj.id === 'class_notes' && pkgCat.includes('class note')) ||
+          (activeCategoryObj.id === 'assignments' && pkgCat.includes('assignment')) ||
+          (activeCategoryObj.id === 'cats_assessments' && (pkgCat.includes('cat') || pkgCat.includes('assessment'))) ||
+          (activeCategoryObj.id === 'revision_exams' && (pkgCat.includes('revision') || pkgCat.includes('exam') || pkgCat.includes('paper'))) ||
+          (activeCategoryObj.id === 'media_resources' && (pkgCat.includes('reading') || pkgCat.includes('story') || pkgCat.includes('media'))) ||
+          (activeCategoryObj.id === 'knec_cbe' && (pkgCat.includes('curriculum') || pkgCat.includes('knec') || pkgCat.includes('cbe'))) ||
+          (activeCategoryObj.id === 'records_of_work' && pkgCat.includes('record')) ||
+          (activeCategoryObj.id === 'rubrics' && (pkgCat.includes('rubric') || pkgCat.includes('reference')));
 
-        const gradeMatch = !pkg.grade || pkg.grade.trim().toLowerCase() === cleanGrade;
-        const subjMatch = !pkg.subject || pkg.subject.trim().toLowerCase() === cleanSubject;
+        const gradeMatch = !pkg.grade || pkg.grade.trim().toLowerCase() === cleanGrade || pkg.grade.toLowerCase() === 'all';
+        const subjMatch = !pkg.subject || pkg.subject.trim().toLowerCase() === cleanSubject || pkg.subject.toLowerCase() === 'all' || pkg.subject.toLowerCase() === 'general';
 
         if (catMatch && gradeMatch && subjMatch) {
           pkg.documents?.forEach((doc) => {
@@ -202,7 +370,7 @@ export function TeacherResourcesStudio({
     return 'document';
   }
 
-  // Handle uploading real file (PDF, Doc, Spreadsheet, Media)
+  // Handle uploading real file (PDF, Doc, Spreadsheet, Media) with offline text extraction
   const processUploadFile = async (file: File) => {
     if (!file) return;
 
@@ -214,12 +382,6 @@ export function TeacherResourcesStudio({
     setIsUploading(true);
     setUploadError(null);
 
-    const isText =
-      file.type.includes('text') ||
-      file.name.endsWith('.txt') ||
-      file.name.endsWith('.csv') ||
-      file.name.endsWith('.md');
-
     const cleanTitle = file.name.replace(/\.[^/.]+$/, '');
     let detected = 'document';
     const ext = file.name.split('.').pop()?.toLowerCase() || '';
@@ -229,56 +391,55 @@ export function TeacherResourcesStudio({
     else if (['mp4', 'webm', 'mov', 'm4v', 'avi'].includes(ext)) detected = 'video';
     else if (['txt', 'md', 'log'].includes(ext)) detected = 'text';
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const result = event.target?.result;
-      if (typeof result !== 'string') {
+    try {
+      // 1. Extract full readable text offline via AI assistant engine
+      const { text } = await extractTextFromFile(file);
+
+      // 2. Read base64 data for storage & preview
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const result = event.target?.result;
+        try {
+          dataLayer.addResourcePackage({
+            packageName: cleanTitle,
+            category: activeCategoryObj.repoCategory,
+            grade: selectedGrade,
+            subject: selectedSubject,
+            academicYear: '2026',
+            term: 'Term 1',
+            recipientTeacherIds: [currentTeacher.id],
+            documents: [
+              {
+                id: `doc_${Date.now()}`,
+                name: file.name,
+                content: text || undefined,
+                fileData: typeof result === 'string' ? result : undefined,
+                fileType: detected,
+                size: formatBytes(file.size),
+                sizeBytes: file.size,
+                versions: [],
+              },
+            ],
+          });
+
+          setIsUploading(false);
+          setRevision((r) => r + 1);
+          showToast(`✓ Uploaded "${file.name}" with offline readable content`);
+        } catch (err: any) {
+          setIsUploading(false);
+          setUploadError(`Upload failed: ${err.message || 'Storage error'}`);
+        }
+      };
+
+      reader.onerror = () => {
         setIsUploading(false);
-        setUploadError('Failed to read file content.');
-        return;
-      }
+        setUploadError('Error reading file from disk.');
+      };
 
-      try {
-        dataLayer.addResourcePackage({
-          packageName: cleanTitle,
-          category: activeCategoryObj.repoCategory,
-          grade: selectedGrade,
-          subject: selectedSubject,
-          academicYear: '2026',
-          term: 'Term 1',
-          recipientTeacherIds: [currentTeacher.id],
-          documents: [
-            {
-              id: `doc_${Date.now()}`,
-              name: file.name,
-              content: isText ? result : undefined,
-              fileData: result,
-              fileType: detected,
-              size: formatBytes(file.size),
-              sizeBytes: file.size,
-              versions: [],
-            },
-          ],
-        });
-
-        setIsUploading(false);
-        setRevision((r) => r + 1);
-        showToast(`✓ Uploaded "${file.name}" to ${activeCategoryObj.title}`);
-      } catch (err: any) {
-        setIsUploading(false);
-        setUploadError(`Upload failed: ${err.message || 'Storage error'}`);
-      }
-    };
-
-    reader.onerror = () => {
-      setIsUploading(false);
-      setUploadError('Error reading file from disk.');
-    };
-
-    if (isText) {
-      reader.readAsText(file);
-    } else {
       reader.readAsDataURL(file);
+    } catch (err: any) {
+      setIsUploading(false);
+      setUploadError(`Extraction error: ${err.message || 'Could not parse document'}`);
     }
   };
 
@@ -345,19 +506,29 @@ export function TeacherResourcesStudio({
     setDeleteDocTarget({ pkgId, title });
   };
 
-  // Open Preview Modal with on-demand IndexedDB hydration
+  // Open Preview Modal with on-demand IndexedDB hydration and text extraction
   const handleOpenPreview = async (doc: typeof activeDocuments[0]) => {
     let dataUrl = doc.fileData;
     if (!dataUrl) {
       dataUrl = (await loadResourceFile(doc.docId)) || undefined;
     }
 
+    let textContent = doc.content;
+    if (!textContent && dataUrl) {
+      try {
+        const res = await extractTextFromDataUrl(dataUrl, doc.fileName);
+        if (res.text) textContent = res.text;
+      } catch {}
+    }
+
+    setPreviewViewTab(textContent ? 'content' : 'file');
+    setPreviewSearchTerm('');
     setPreviewDoc({
       id: doc.docId,
       title: doc.title,
       name: doc.fileName,
       fileData: dataUrl,
-      content: doc.content,
+      content: textContent,
       fileType: doc.fileType,
     });
   };
@@ -400,8 +571,273 @@ export function TeacherResourcesStudio({
         accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.png,.jpg,.jpeg,.mp4,.webm"
       />
 
-      {/* Top Banner & Grade/Subject Selectors */}
-      <div className="p-4 rounded-2xl bg-[#080E24] border border-slate-800 space-y-3">
+      {/* Top View Selector: Curriculum Folders vs All Dispatched Resources */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-2.5 rounded-2xl bg-[#080E24] border border-slate-800">
+        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-900 border border-slate-800">
+          <button
+            type="button"
+            onClick={() => setStudioTab('category')}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+              studioTab === 'category'
+                ? 'bg-amber-500 text-slate-950 shadow-md'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <FolderOpen className="w-3.5 h-3.5" />
+            <span>Curriculum Categories</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setStudioTab('dispatched')}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+              studioTab === 'dispatched'
+                ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Inbox className="w-3.5 h-3.5 text-cyan-400" />
+            <span>All Dispatched to Me</span>
+            {allDispatchedDocs.length > 0 && (
+              <span
+                className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${
+                  studioTab === 'dispatched'
+                    ? 'bg-slate-950 text-cyan-300'
+                    : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                }`}
+              >
+                {allDispatchedDocs.length}
+              </span>
+            )}
+          </button>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setShowAIAssistant(true)}
+          className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 text-xs font-bold transition cursor-pointer flex items-center justify-center gap-1.5 shadow-sm shadow-cyan-500/20"
+          title="Launch Offline AI Document Assistant to read content and route files"
+        >
+          <Sparkles className="w-3.5 h-3.5" />
+          <span>Offline AI Assistant</span>
+        </button>
+      </div>
+
+      {studioTab === 'dispatched' ? (
+        /* DISPATCHED CURRICULUM WORKBENCH */
+        <div className="p-4 sm:p-5 rounded-2xl bg-[#080E24] border border-cyan-500/30 space-y-4 animate-in fade-in shadow-xl">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+            <div>
+              <h3 className="text-sm sm:text-base font-black text-white flex items-center gap-2">
+                <Inbox className="w-4 h-4 text-cyan-400" />
+                <span>All Documents Dispatched to Tr. {currentTeacher.name}</span>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 font-mono font-bold">
+                  {allDispatchedDocs.length} Total
+                </span>
+              </h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Every curriculum resource, scheme, assessment, and note routed to your portal by administration and the Offline AI Assistant.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Filter by subject, grade, title..."
+                  value={dispatchedSearchQuery}
+                  onChange={(e) => setDispatchedSearchQuery(e.target.value)}
+                  className="pl-8 pr-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 w-52 sm:w-64"
+                />
+              </div>
+              {dispatchedSearchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setDispatchedSearchQuery('')}
+                  className="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white text-xs"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {filteredDispatchedDocs.length === 0 ? (
+            <div className="py-12 text-center space-y-3 border border-dashed border-slate-800 rounded-xl bg-slate-900/20 px-4">
+              <Inbox className="w-10 h-10 text-slate-600 mx-auto" />
+              <p className="text-sm font-bold text-slate-300">
+                {dispatchedSearchQuery
+                  ? `No resources match "${dispatchedSearchQuery}"`
+                  : 'No curriculum packages dispatched yet'}
+              </p>
+              <p className="text-xs text-slate-500 max-w-md mx-auto">
+                {dispatchedSearchQuery
+                  ? 'Try searching with another keyword or clear the search query.'
+                  : 'When the administrator or the Offline AI Assistant dispatches resources for your classes, they will be listed here automatically.'}
+              </p>
+              {dispatchedSearchQuery ? (
+                <button
+                  type="button"
+                  onClick={() => setDispatchedSearchQuery('')}
+                  className="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-200 text-xs font-bold hover:bg-slate-700 cursor-pointer"
+                >
+                  Clear Search
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowAIAssistant(true)}
+                  className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 text-xs font-bold transition inline-flex items-center gap-1.5 shadow cursor-pointer"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Launch Offline AI Assistant</span>
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              <div className="text-[11px] text-slate-400 font-mono flex items-center justify-between">
+                <span>Showing {filteredDispatchedDocs.length} dispatched resource(s)</span>
+                <span className="hidden sm:inline">Click "Read Content" to view full text offline or "Go to Folder" to jump to category</span>
+              </div>
+
+              <div className="grid grid-cols-1 gap-2.5">
+                {filteredDispatchedDocs.map((doc) => {
+                  const isPdf = doc.fileType === 'pdf' || doc.fileName.toLowerCase().endsWith('.pdf');
+                  const isSheet = doc.fileType === 'spreadsheet' || doc.fileName.match(/\.(xlsx|xls|csv)$/i);
+
+                  return (
+                    <div
+                      key={`${doc.pkgId}_${doc.docId}`}
+                      className="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-cyan-500/40 transition flex flex-col lg:flex-row lg:items-center justify-between gap-3 group"
+                    >
+                      <div className="flex items-start gap-3 min-w-0">
+                        <div
+                          className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 mt-0.5 ${
+                            isPdf
+                              ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                              : isSheet
+                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                              : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                          }`}
+                        >
+                          {isPdf ? 'PDF' : isSheet ? 'XLS' : 'DOC'}
+                        </div>
+
+                        <div className="min-w-0 space-y-1">
+                          <h5 className="text-sm font-bold text-white truncate group-hover:text-cyan-300 transition-colors">
+                            {doc.title}
+                          </h5>
+                          <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
+                            <span className="px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-300 font-bold border border-amber-500/30">
+                              {doc.grade}
+                            </span>
+                            <span className="px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-300 font-bold border border-emerald-500/30">
+                              {doc.subject}
+                            </span>
+                            <span className="px-2 py-0.5 rounded-md bg-purple-500/15 text-purple-300 font-semibold border border-purple-500/30">
+                              {doc.category}
+                            </span>
+                            {doc.strand && (
+                              <span className="px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 font-medium">
+                                {doc.strand}
+                              </span>
+                            )}
+                            <span className="font-mono text-slate-400">
+                              {doc.fileName} • {doc.size}
+                            </span>
+                            {doc.content ? (
+                              <span className="px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/30">
+                                📖 Text Extracted
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-1.5 shrink-0 self-end lg:self-center">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenPreview(doc)}
+                          className="px-2.5 py-1.5 rounded-lg bg-cyan-500/20 border border-cyan-500/40 hover:bg-cyan-500/30 text-cyan-300 text-xs font-bold transition cursor-pointer flex items-center gap-1"
+                          title="Read full document text offline"
+                        >
+                          <BookOpen className="w-3.5 h-3.5 text-cyan-400" />
+                          <span>Read Content</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenPreview(doc)}
+                          className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition cursor-pointer flex items-center gap-1"
+                          title="Preview file"
+                        >
+                          <Eye className="w-3.5 h-3.5 text-amber-400" />
+                          <span>Preview</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDownloadFile(doc)}
+                          className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition cursor-pointer flex items-center gap-1"
+                          title="Download file"
+                        >
+                          <Download className="w-3.5 h-3.5 text-blue-400" />
+                          <span>Download</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleGoToDocFolder(doc)}
+                          className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-amber-500/20 text-slate-300 hover:text-amber-300 text-xs font-bold transition cursor-pointer flex items-center gap-1 border border-slate-700 hover:border-amber-400/50"
+                          title="Open this folder in 15 curriculum categories"
+                        >
+                          <ArrowRight className="w-3.5 h-3.5" />
+                          <span>Go to Folder</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteDocument(doc.pkgId, doc.title)}
+                          className="p-1.5 rounded-lg bg-slate-800/80 hover:bg-rose-500/20 hover:text-rose-400 text-slate-400 transition cursor-pointer"
+                          title="Delete from portal"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        <>
+          {allDispatchedDocs.length > 0 && (
+            <div className="p-3 rounded-xl bg-gradient-to-r from-cyan-950/60 to-blue-950/40 border border-cyan-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 rounded-lg bg-cyan-500/20 text-cyan-400">
+                  <Sparkles className="w-4 h-4" />
+                </span>
+                <div>
+                  <p className="text-xs font-bold text-white">
+                    {allDispatchedDocs.length} curriculum resource(s) synchronized to your portal
+                  </p>
+                  <p className="text-[10px] text-slate-400">
+                    Dispatched to your account and categorized across your grade & subject folders.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setStudioTab('dispatched')}
+                className="px-3 py-1 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold transition shrink-0 cursor-pointer self-start sm:self-auto flex items-center gap-1"
+              >
+                <span>View All ({allDispatchedDocs.length})</span>
+                <ChevronRight className="w-3 h-3" />
+              </button>
+            </div>
+          )}
+
+          {/* Top Banner & Grade/Subject Selectors */}
+          <div className="p-4 rounded-2xl bg-[#080E24] border border-slate-800 space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
           <div>
             <h3 className="text-sm font-black text-white flex items-center gap-2">
@@ -451,8 +887,15 @@ export function TeacherResourcesStudio({
               }`}
             >
               <span className="text-xl flex-shrink-0">{c.icon}</span>
-              <div className="min-w-0">
-                <span className="text-xs font-bold block truncate">{c.title}</span>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-1">
+                  <span className="text-xs font-bold block truncate">{c.title}</span>
+                  {(categoryCounts[c.id] || 0) > 0 && (
+                    <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300 font-mono font-bold shrink-0">
+                      {categoryCounts[c.id]}
+                    </span>
+                  )}
+                </div>
                 <span className="text-[10px] text-slate-400 block truncate">{c.desc}</span>
               </div>
             </button>
@@ -476,7 +919,16 @@ export function TeacherResourcesStudio({
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowAIAssistant(true)}
+              className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shadow-sm shadow-cyan-500/20"
+              title="Launch Offline AI Document Assistant to read content and route files"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Offline AI Assistant</span>
+            </button>
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
@@ -540,14 +992,26 @@ export function TeacherResourcesStudio({
           </div>
 
           {activeDocuments.length === 0 ? (
-            <div className="py-10 text-center space-y-2 border border-dashed border-slate-800 rounded-xl bg-slate-900/20">
+            <div className="py-10 text-center space-y-2 border border-dashed border-slate-800 rounded-xl bg-slate-900/20 px-4">
               <FileText className="w-8 h-8 text-slate-600 mx-auto" />
               <p className="text-xs font-bold text-slate-300">
                 No documents uploaded yet in {activeCategoryObj.title}
               </p>
               <p className="text-[11px] text-slate-500 max-w-sm mx-auto">
-                Use the "Upload PDF / Doc" button above to install lesson notes, schemes of work, or assignments.
+                {allDispatchedDocs.length > 0
+                  ? `You have ${allDispatchedDocs.length} curriculum resource(s) in other categories or subjects.`
+                  : 'Use the "Upload PDF / Doc" button above to install lesson notes, schemes of work, or assignments.'}
               </p>
+              {allDispatchedDocs.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setStudioTab('dispatched')}
+                  className="px-3 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold transition cursor-pointer inline-flex items-center gap-1 mt-1"
+                >
+                  <Inbox className="w-3.5 h-3.5" />
+                  <span>View All {allDispatchedDocs.length} Dispatched Documents</span>
+                </button>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-2">
@@ -623,6 +1087,8 @@ export function TeacherResourcesStudio({
           )}
         </div>
       </div>
+    </>
+  )}
 
       {/* CREATE NOTES MODAL */}
       {showNoteModal && (
@@ -708,21 +1174,76 @@ export function TeacherResourcesStudio({
         </div>
       )}
 
-      {/* DOCUMENT & PDF PREVIEW MODAL */}
+      {/* DOCUMENT & PDF PREVIEW MODAL WITH CONTENT READER */}
       {previewDoc && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/85 backdrop-blur-md animate-in fade-in">
-          <div className="w-full max-w-4xl h-[85vh] rounded-2xl bg-[#080E24] border border-slate-800 shadow-2xl flex flex-col overflow-hidden">
+          <div className="w-full max-w-4xl h-[88vh] rounded-3xl bg-[#080E24] border border-cyan-500/30 shadow-2xl flex flex-col overflow-hidden text-white">
             {/* Header */}
-            <div className="p-3 sm:p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/80">
-              <div className="flex items-center gap-2 min-w-0">
-                <FileCheck className="w-5 h-5 text-amber-400 shrink-0" />
+            <div className="p-3 sm:p-4 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3 bg-slate-950/80">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="p-2 rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
+                  <FileCheck className="w-5 h-5" />
+                </div>
                 <div className="min-w-0">
                   <h4 className="text-xs sm:text-sm font-bold text-white truncate">{previewDoc.title}</h4>
                   <p className="text-[10px] text-slate-400 font-mono truncate">{previewDoc.name}</p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 shrink-0">
+              {/* View Mode Toggle: Read Content vs File Preview */}
+              <div className="flex items-center gap-2">
+                <div className="flex items-center rounded-xl bg-slate-900 border border-slate-800 p-0.5 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewViewTab('content')}
+                    className={`px-3 py-1 rounded-lg font-bold transition flex items-center gap-1 cursor-pointer ${
+                      previewViewTab === 'content'
+                        ? 'bg-cyan-500 text-slate-950 shadow-sm'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <BookOpen className="w-3.5 h-3.5" />
+                    <span>Read Content</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewViewTab('file')}
+                    className={`px-3 py-1 rounded-lg font-bold transition cursor-pointer ${
+                      previewViewTab === 'file'
+                        ? 'bg-amber-500 text-slate-950 shadow-sm'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <span>File Preview</span>
+                  </button>
+                </div>
+
+                {/* Extract Text Button if missing */}
+                <button
+                  type="button"
+                  disabled={isExtractingPreview}
+                  onClick={async () => {
+                    if (previewDoc.fileData) {
+                      setIsExtractingPreview(true);
+                      try {
+                        const res = await extractTextFromDataUrl(previewDoc.fileData, previewDoc.name);
+                        if (res.text) {
+                          setPreviewDoc((prev) => (prev ? { ...prev, content: res.text } : null));
+                          setPreviewViewTab('content');
+                          showToast('✓ Extracted text with Offline AI');
+                        }
+                      } finally {
+                        setIsExtractingPreview(false);
+                      }
+                    }
+                  }}
+                  className="px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 hover:bg-slate-800 text-cyan-300 text-xs font-bold flex items-center gap-1 cursor-pointer"
+                  title="Extract text using offline AI reader"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                  <span className="hidden md:inline">{isExtractingPreview ? 'Extracting...' : 'Extract Text'}</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => window.print()}
@@ -731,6 +1252,7 @@ export function TeacherResourcesStudio({
                   <Printer className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">Print</span>
                 </button>
+
                 <button
                   type="button"
                   onClick={() => {
@@ -747,6 +1269,7 @@ export function TeacherResourcesStudio({
                   <Download className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">Download</span>
                 </button>
+
                 <button
                   type="button"
                   onClick={() => setPreviewDoc(null)}
@@ -759,12 +1282,86 @@ export function TeacherResourcesStudio({
 
             {/* Viewer Content */}
             <div className="flex-1 overflow-auto p-4 sm:p-6 bg-slate-950 flex justify-center items-start">
-              {previewDoc.fileData && (previewDoc.fileData.startsWith('data:application/pdf') || previewDoc.name.toLowerCase().endsWith('.pdf')) ? (
-                <iframe
-                  src={previewDoc.fileData}
-                  title={previewDoc.title}
-                  className="w-full h-full rounded-xl border border-slate-800 bg-white shadow-xl"
-                />
+              {previewViewTab === 'content' || (!previewDoc.fileData && previewDoc.content) ? (
+                /* READABLE DOCUMENT CONTENT VIEW */
+                <div className="w-full max-w-3xl rounded-2xl bg-slate-900 border border-slate-800 p-5 sm:p-8 shadow-2xl space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                    <div>
+                      <h4 className="text-base font-bold text-white">{previewDoc.title}</h4>
+                      <p className="text-xs text-cyan-400 font-mono mt-0.5">
+                        {previewDoc.name} • {selectedGrade} • {selectedSubject}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <div className="relative">
+                        <Search className="w-3 h-3 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          placeholder="Search in text..."
+                          value={previewSearchTerm}
+                          onChange={(e) => setPreviewSearchTerm(e.target.value)}
+                          className="pl-7 pr-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 w-36 sm:w-44"
+                        />
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (previewDoc.content) {
+                            navigator.clipboard.writeText(previewDoc.content);
+                            setCopiedPreviewText(true);
+                            setTimeout(() => setCopiedPreviewText(false), 2000);
+                          }
+                        }}
+                        className="px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 text-xs font-bold text-slate-200 hover:text-white flex items-center gap-1 cursor-pointer"
+                      >
+                        {copiedPreviewText ? (
+                          <>
+                            <Check className="w-3 h-3 text-emerald-400" />
+                            <span className="text-emerald-400">Copied</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3 h-3" />
+                            <span>Copy</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="p-4 sm:p-6 rounded-xl bg-slate-950 font-sans text-xs sm:text-sm text-slate-200 leading-relaxed whitespace-pre-wrap min-h-[350px]">
+                    {previewDoc.content
+                      ? (previewSearchTerm
+                          ? previewDoc.content
+                              .split('\n')
+                              .filter((line) => line.toLowerCase().includes(previewSearchTerm.toLowerCase()))
+                              .join('\n') || `No matching lines for "${previewSearchTerm}".`
+                          : previewDoc.content)
+                      : 'No readable text extracted. Click "Extract Text" above to read this file offline.'}
+                  </div>
+                </div>
+              ) : previewDoc.fileData && (previewDoc.fileData.startsWith('data:application/pdf') || previewDoc.name.toLowerCase().endsWith('.pdf')) ? (
+                /* PDF IFRAME VIEW */
+                <div className="w-full max-w-4xl h-full flex flex-col gap-2">
+                  <iframe
+                    src={previewDoc.fileData}
+                    title={previewDoc.title}
+                    className="w-full flex-1 rounded-2xl border border-slate-800 bg-white shadow-xl"
+                  />
+                  <p className="text-[11px] text-slate-400 text-center">
+                    If this PDF preview does not display inside the browser sandbox, switch to{' '}
+                    <button
+                      type="button"
+                      onClick={() => setPreviewViewTab('content')}
+                      className="text-cyan-400 underline font-bold cursor-pointer"
+                    >
+                      Read Content
+                    </button>{' '}
+                    to read extracted text directly.
+                  </p>
+                </div>
               ) : previewDoc.fileData && previewDoc.fileData.startsWith('data:image/') ? (
                 <img
                   src={previewDoc.fileData}
@@ -786,6 +1383,21 @@ export function TeacherResourcesStudio({
           </div>
         </div>
       )}
+
+      {/* OFFLINE AI DOCUMENT ASSISTANT MODAL */}
+      <OfflineAIDocumentAssistantModal
+        isOpen={showAIAssistant}
+        onClose={() => setShowAIAssistant(false)}
+        initialGrade={selectedGrade}
+        initialSubject={selectedSubject}
+        initialCategory={activeCategoryObj.repoCategory}
+        initialTeacherId={currentTeacher.id}
+        onDispatched={() => {
+          setShowAIAssistant(false);
+          setRevision((r) => r + 1);
+          showToast('✓ Resource dispatched via Offline AI Assistant');
+        }}
+      />
 
       {/* DELETE DOCUMENT CONFIRMATION MODAL */}
       {deleteDocTarget && (

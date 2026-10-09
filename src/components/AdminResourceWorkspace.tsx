@@ -36,6 +36,7 @@ import {
   Clock,
   Layers,
   FileCheck,
+  BookOpen,
 } from 'lucide-react';
 import {
   dataLayer,
@@ -46,6 +47,8 @@ import {
   loadResourceFile,
   saveResourceFile,
 } from '../services/dataLayer.ts';
+import { extractTextFromDataUrl } from '../services/aiDocumentAssistant.ts';
+import { OfflineAIDocumentAssistantModal } from './OfflineAIDocumentAssistantModal.tsx';
 
 // -----------------------------------------------------------------------------
 // STORAGE UTILITIES (500 MB SCHOOL REPOSITORY QUOTA)
@@ -229,6 +232,11 @@ export function AdminResourceWorkspace({
     }
   }, [targetGrade, targetAvailableSubjects, targetSubject]);
 
+  // PDF View Mode & Offline AI State
+  const [pdfViewMode, setPdfViewMode] = useState<'preview' | 'reader'>('preview');
+  const [isExtractingText, setIsExtractingText] = useState(false);
+  const [showAIAssistantModal, setShowAIAssistantModal] = useState(false);
+
   // Hydrate full file data from IndexedDB if not already loaded in memory
   useEffect(() => {
     if (!fileData && currentDoc.id) {
@@ -238,10 +246,24 @@ export function AdminResourceWorkspace({
           if (storedData.startsWith('data:application/pdf') || currentDoc.name.toLowerCase().endsWith('.pdf')) {
             setFileType('pdf');
           }
+          // If docContent is empty, extract text offline
+          if (!docContent) {
+            extractTextFromDataUrl(storedData, currentDoc.name).then((res) => {
+              if (res.text) {
+                setDocContent(res.text);
+              }
+            });
+          }
+        }
+      });
+    } else if (fileData && !docContent) {
+      extractTextFromDataUrl(fileData, currentDoc.name).then((res) => {
+        if (res.text) {
+          setDocContent(res.text);
         }
       });
     }
-  }, [currentDoc.id, fileData, currentDoc.name]);
+  }, [currentDoc.id, fileData, currentDoc.name, docContent]);
 
   // Search in doc
   const [searchDocTerm, setSearchDocTerm] = useState('');
@@ -779,6 +801,16 @@ export function AdminResourceWorkspace({
             <span className="hidden sm:inline">Save</span>
           </button>
 
+          {/* Offline AI Assistant Action */}
+          <button
+            onClick={() => setShowAIAssistantModal(true)}
+            className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shadow-sm shadow-cyan-500/20"
+            title="Launch Offline AI Document Assistant"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span className="hidden md:inline">AI Router</span>
+          </button>
+
           {/* Download Action */}
           <button
             onClick={handleDownload}
@@ -1178,21 +1210,76 @@ export function AdminResourceWorkspace({
         {fileType === 'pdf' && (
           <div className="flex-1 flex flex-col min-h-0 bg-[#050814]">
             {/* PDF Toolbar */}
-            <div className="px-3 py-2 border-b border-slate-800 bg-[#080E24] flex items-center justify-between text-xs">
+            <div className="px-3 py-2 border-b border-slate-800 bg-[#080E24] flex flex-wrap items-center justify-between gap-2 text-xs">
               <div className="flex items-center gap-2">
-                <span className="font-bold text-slate-300 font-mono">PDF Viewer: {docName}</span>
-                <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-amber-400 font-bold">
-                  {currentDoc.size || 'CBC Document'}
-                </span>
+                <span className="font-bold text-slate-300 font-mono truncate max-w-[200px]">{docName}</span>
+                {/* View Mode Toggle: File Preview vs Extracted Content Reader */}
+                <div className="flex items-center rounded-lg bg-slate-900 border border-slate-800 p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setPdfViewMode('preview')}
+                    className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition cursor-pointer ${
+                      pdfViewMode === 'preview'
+                        ? 'bg-amber-500 text-slate-950 shadow-sm'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    📄 File Preview
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPdfViewMode('reader')}
+                    className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-1 cursor-pointer ${
+                      pdfViewMode === 'reader'
+                        ? 'bg-cyan-500 text-slate-950 shadow-sm'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <BookOpen className="w-3 h-3" />
+                    <span>📖 Read Content (AI)</span>
+                  </button>
+                </div>
               </div>
 
               <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setIsExtractingText(true);
+                    try {
+                      let data: string | undefined = fileData;
+                      if (!data && currentDoc.id) {
+                        data = (await loadResourceFile(currentDoc.id)) || undefined;
+                      }
+                      if (data) {
+                        const res = await extractTextFromDataUrl(data, docName);
+                        if (res.text) {
+                          setDocContent(res.text);
+                          setIsSaved(false);
+                          setPdfViewMode('reader');
+                          setSaveMessage('Extracted document text with Offline AI');
+                          setTimeout(() => setSaveMessage(null), 3000);
+                        }
+                      }
+                    } catch (e) {
+                      console.error(e);
+                    } finally {
+                      setIsExtractingText(false);
+                    }
+                  }}
+                  disabled={isExtractingText}
+                  className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 font-bold flex items-center gap-1 cursor-pointer"
+                  title="Extract text offline using AI document assistant"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>{isExtractingText ? 'Extracting...' : 'Extract Text Offline'}</span>
+                </button>
                 <button
                   onClick={handlePrint}
                   className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold flex items-center gap-1 cursor-pointer"
                 >
                   <Printer className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Print PDF</span>
+                  <span>Print</span>
                 </button>
                 <button
                   onClick={handleDownload}
@@ -1206,26 +1293,55 @@ export function AdminResourceWorkspace({
 
             {/* Embedded PDF Viewer or Paginated Document Renderer */}
             <div className="flex-1 overflow-auto p-4 sm:p-8 flex justify-center">
-              {fileData && fileData.startsWith('data:application/pdf') ? (
-                <iframe
-                  src={fileData}
-                  title={docName}
-                  className="w-full max-w-4xl h-full rounded-2xl border border-slate-800 bg-white shadow-2xl"
-                />
+              {pdfViewMode === 'preview' && fileData && fileData.startsWith('data:application/pdf') ? (
+                <div className="w-full max-w-4xl h-full flex flex-col gap-2">
+                  <iframe
+                    src={fileData}
+                    title={docName}
+                    className="w-full flex-1 rounded-2xl border border-slate-800 bg-white shadow-2xl"
+                  />
+                  <p className="text-[11px] text-slate-400 text-center">
+                    Note: If your browser blocks embedded PDF rendering, switch to the{' '}
+                    <button
+                      type="button"
+                      className="text-cyan-400 underline font-bold cursor-pointer"
+                      onClick={() => setPdfViewMode('reader')}
+                    >
+                      📖 Read Content (AI)
+                    </button>{' '}
+                    tab to view full document text offline.
+                  </p>
+                </div>
               ) : (
-                <div className="w-full max-w-3xl rounded-2xl bg-slate-900 border border-slate-800 p-8 shadow-2xl space-y-4">
+                <div className="w-full max-w-3xl rounded-2xl bg-slate-900 border border-slate-800 p-6 sm:p-8 shadow-2xl space-y-4">
                   <div className="flex items-center justify-between border-b border-slate-800 pb-3">
                     <div>
                       <h3 className="text-base font-bold text-white">{resource.title}</h3>
-                      <p className="text-xs text-slate-400">Official Little Roses Academy PDF Document</p>
+                      <p className="text-xs text-cyan-400 font-mono mt-0.5">{grade} • {subject} • {categoryName}</p>
                     </div>
-                    <span className="text-xs px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-400 font-mono font-bold">
-                      PDF Document
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (docContent) {
+                            navigator.clipboard.writeText(docContent);
+                            setSaveMessage('Copied document text to clipboard');
+                            setTimeout(() => setSaveMessage(null), 2500);
+                          }
+                        }}
+                        className="px-2.5 py-1 rounded-lg bg-slate-800 text-xs font-bold text-slate-300 hover:text-white flex items-center gap-1 cursor-pointer"
+                      >
+                        <Copy className="w-3 h-3" />
+                        <span>Copy</span>
+                      </button>
+                      <span className="text-xs px-2.5 py-1 rounded-full bg-cyan-500/20 text-cyan-400 font-mono font-bold">
+                        Offline AI Extracted Content
+                      </span>
+                    </div>
                   </div>
 
-                  <div className="p-4 rounded-xl bg-slate-950 font-sans text-xs text-slate-300 leading-relaxed whitespace-pre-wrap min-h-[400px]">
-                    {docContent || 'This document is ready for official curriculum archiving.'}
+                  <div className="p-4 sm:p-6 rounded-xl bg-slate-950 font-sans text-xs sm:text-sm text-slate-200 leading-relaxed whitespace-pre-wrap min-h-[400px]">
+                    {docContent || 'Extracting document text offline... Click "Extract Text Offline" above to process.'}
                   </div>
                 </div>
               )}
@@ -1712,6 +1828,22 @@ export function AdminResourceWorkspace({
           </div>
         </div>
       )}
+
+      {/* OFFLINE AI DOCUMENT ASSISTANT MODAL */}
+      <OfflineAIDocumentAssistantModal
+        isOpen={showAIAssistantModal}
+        onClose={() => setShowAIAssistantModal(false)}
+        initialGrade={grade}
+        initialSubject={subject}
+        initialCategory={categoryName}
+        initialTeacherId={teacher?.id}
+        onDispatched={() => {
+          setShowAIAssistantModal(false);
+          onRefresh();
+          setSaveMessage('Resource successfully dispatched via Offline AI');
+          setTimeout(() => setSaveMessage(null), 4000);
+        }}
+      />
     </div>
   );
 }

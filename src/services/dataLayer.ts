@@ -3347,7 +3347,12 @@ class SchoolDataLayer {
       });
 
       if (teacherId) {
-        list = list.filter((p) => p.recipientTeacherIds.includes(teacherId) || p.recipientTeacherIds.includes('all'));
+        list = list.filter((p) => {
+          if (!p.recipientTeacherIds || !Array.isArray(p.recipientTeacherIds) || p.recipientTeacherIds.length === 0) {
+            return true;
+          }
+          return p.recipientTeacherIds.includes(teacherId) || p.recipientTeacherIds.includes('all');
+        });
       }
       return list;
     } catch {
