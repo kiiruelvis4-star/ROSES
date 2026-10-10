@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Logo } from './Logo.tsx';
+import campusImage from '../assets/images/splash1_campus_crest_1790668349675.jpg';
 
 interface Splash2Props {
   mode?: 'phone' | 'tablet' | 'full';
@@ -30,13 +31,20 @@ export function Splash2({ onComplete }: Splash2Props) {
       onClick={onComplete}
       className="relative w-full h-full flex-1 flex flex-col items-center justify-between p-8 bg-[#070D1E] text-white select-none cursor-pointer overflow-hidden"
     >
-      <div className="w-full flex justify-end">
+      <div className="absolute inset-0 bg-gradient-to-b from-[#070D1E]/90 via-[#09172d]/80 to-[#070D1E]" />
+      <img
+        src={campusImage}
+        alt="Little Roses Academy crest"
+        className="absolute inset-0 w-full h-full object-cover opacity-15"
+      />
+
+      <div className="relative z-10 w-full flex justify-end">
         <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">
           Version 1.0.0
         </span>
       </div>
 
-      <div className="flex flex-col items-center justify-center space-y-6 text-center animate-in zoom-in-95 duration-500">
+      <div className="relative z-10 flex flex-col items-center justify-center space-y-6 text-center animate-in zoom-in-95 duration-500">
         <Logo size="xl" showTagline={true} />
         <div className="space-y-1">
           <h2 className="text-xl font-black tracking-tight text-white">
@@ -48,8 +56,7 @@ export function Splash2({ onComplete }: Splash2Props) {
         </div>
       </div>
 
-      {/* Progress Bar 0-100% */}
-      <div className="w-full max-w-xs space-y-2">
+      <div className="relative z-10 w-full max-w-xs space-y-2">
         <div className="flex justify-between text-[11px] font-mono text-slate-400">
           <span>Loading offline modules...</span>
           <span className="font-bold text-amber-400">{progress}%</span>
