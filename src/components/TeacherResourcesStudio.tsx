@@ -760,19 +760,10 @@ export function TeacherResourcesStudio({
                           type="button"
                           onClick={() => handleOpenPreview(doc)}
                           className="px-2.5 py-1.5 rounded-lg bg-cyan-500/20 border border-cyan-500/40 hover:bg-cyan-500/30 text-cyan-300 text-xs font-bold transition cursor-pointer flex items-center gap-1"
-                          title="Read full document text offline"
+                          title="Open document, read content or preview file"
                         >
                           <BookOpen className="w-3.5 h-3.5 text-cyan-400" />
-                          <span>Read Content</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleOpenPreview(doc)}
-                          className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition cursor-pointer flex items-center gap-1"
-                          title="Preview file"
-                        >
-                          <Eye className="w-3.5 h-3.5 text-amber-400" />
-                          <span>Preview</span>
+                          <span>Read / Preview</span>
                         </button>
                         <button
                           type="button"
@@ -922,6 +913,15 @@ export function TeacherResourcesStudio({
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shadow-sm"
+              title="Upload PDF, Word document, exam paper or spreadsheet"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              <span>Upload Document</span>
+            </button>
+            <button
+              type="button"
               onClick={() => setShowAIAssistant(true)}
               className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shadow-sm shadow-cyan-500/20"
               title="Launch Offline AI Document Assistant to read content and route files"
@@ -931,17 +931,8 @@ export function TeacherResourcesStudio({
             </button>
             <button
               type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shadow-sm"
-              title="Upload PDF, Word document, spreadsheet or notes"
-            >
-              <FileUp className="w-3.5 h-3.5" />
-              <span>Upload PDF / Doc</span>
-            </button>
-            <button
-              type="button"
               onClick={() => setShowNoteModal(true)}
-              className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700 hover:bg-slate-800 text-slate-300 text-xs font-bold transition cursor-pointer flex items-center gap-1.5"
+              className="px-3.5 py-1.5 rounded-xl bg-slate-900 border border-slate-700 hover:bg-slate-800 text-slate-200 text-xs font-bold transition cursor-pointer flex items-center gap-1.5"
             >
               <Plus className="w-3.5 h-3.5 text-amber-400" />
               <span>New Notes</span>

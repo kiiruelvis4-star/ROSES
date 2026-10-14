@@ -87,11 +87,11 @@ export const TeacherModal: React.FC<TeacherModalProps> = ({
   const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
-  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Initialize or reset form on open / change
   useEffect(() => {
-    setIsConfirmingDelete(false);
+    setShowDeleteConfirm(false);
     if (teacher) {
       setName(teacher.name || '');
       setPhone(teacher.phone || '');
@@ -790,57 +790,70 @@ export const TeacherModal: React.FC<TeacherModalProps> = ({
           </div>
 
           {/* Actions */}
-          <div className="flex items-center justify-between pt-3 border-t border-slate-800">
-            {isEdit && onDelete ? (
-              !isConfirmingDelete ? (
-                <button
-                  type="button"
-                  onClick={() => setIsConfirmingDelete(true)}
-                  className="px-3 py-1.5 rounded-xl border border-rose-500/30 text-rose-400 hover:bg-rose-500/20 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>Delete</span>
-                </button>
-              ) : (
-                <div className="flex items-center gap-2 bg-rose-950/60 border border-rose-600/50 px-2.5 py-1 rounded-xl animate-in fade-in">
-                  <span className="text-[11px] text-rose-300 font-bold">Permanently delete?</span>
+          <div className="pt-3 border-t border-slate-800 space-y-2">
+            {showDeleteConfirm && isEdit && teacher && (
+              <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/40 text-xs space-y-2">
+                <div className="flex items-center gap-2 text-rose-300 font-bold">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>Confirm Permanent Deletion of {teacher.name}?</span>
+                </div>
+                <p className="text-[11px] text-slate-300">
+                  This will permanently delete this teacher account from the roster. This action cannot be undone.
+                </p>
+                <div className="flex items-center justify-end gap-2 pt-1">
                   <button
                     type="button"
-                    onClick={() => {
-                      onDelete(teacher.id);
-                      setIsConfirmingDelete(false);
-                      onClose();
-                    }}
-                    className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-bold transition cursor-pointer shadow"
-                  >
-                    Yes, Delete
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setIsConfirmingDelete(false)}
-                    className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-semibold cursor-pointer"
+                    onClick={() => setShowDeleteConfirm(false)}
+                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold cursor-pointer"
                   >
                     Cancel
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (teacher && onDelete) {
+                        onDelete(teacher.id);
+                        onClose();
+                      }
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold flex items-center gap-1 shadow cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Confirm Delete</span>
+                  </button>
                 </div>
-              )
-            ) : <div />}
+              </div>
+            )}
 
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isSaving || !isPhoneUnique}
-                className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg transition cursor-pointer disabled:opacity-50"
-              >
-                {isSaving ? 'Saving...' : isEdit ? 'Save Changes' : 'Add Teacher'}
-              </button>
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                {isEdit && onDelete && teacher && !showDeleteConfirm && (
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="px-3 py-2 rounded-xl border border-rose-500/30 text-rose-400 hover:bg-rose-500/20 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Delete Teacher</span>
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2 rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSaving || !isPhoneUnique}
+                  className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg transition cursor-pointer disabled:opacity-50"
+                >
+                  {isSaving ? 'Saving...' : isEdit ? 'Save Changes' : 'Add Teacher'}
+                </button>
+              </div>
             </div>
           </div>
         </form>
@@ -883,11 +896,11 @@ export const LearnerModal: React.FC<LearnerModalProps> = ({
   const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
-  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Initialize or reset form
   useEffect(() => {
-    setIsConfirmingDelete(false);
+    setShowDeleteConfirm(false);
     if (pupil) {
       setName(pupil.name || '');
       setGrade(pupil.grade || 'Grade 4');
@@ -1381,57 +1394,70 @@ export const LearnerModal: React.FC<LearnerModalProps> = ({
           )}
 
           {/* Actions */}
-          <div className="flex items-center justify-between pt-3 border-t border-slate-800">
-            {isEdit && onDelete ? (
-              !isConfirmingDelete ? (
-                <button
-                  type="button"
-                  onClick={() => setIsConfirmingDelete(true)}
-                  className="px-3 py-1.5 rounded-xl border border-rose-500/30 text-rose-400 hover:bg-rose-500/20 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>Delete</span>
-                </button>
-              ) : (
-                <div className="flex items-center gap-2 bg-rose-950/60 border border-rose-600/50 px-2.5 py-1 rounded-xl animate-in fade-in">
-                  <span className="text-[11px] text-rose-300 font-bold">Permanently delete?</span>
+          <div className="pt-3 border-t border-slate-800 space-y-2">
+            {showDeleteConfirm && isEdit && pupil && (
+              <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/40 text-xs space-y-2">
+                <div className="flex items-center gap-2 text-rose-300 font-bold">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>Confirm Permanent Deletion of Learner {pupil.name}?</span>
+                </div>
+                <p className="text-[11px] text-slate-300">
+                  This will permanently delete this learner admission record and UPI from the school registry.
+                </p>
+                <div className="flex items-center justify-end gap-2 pt-1">
                   <button
                     type="button"
-                    onClick={() => {
-                      onDelete(pupil.id);
-                      setIsConfirmingDelete(false);
-                      onClose();
-                    }}
-                    className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-bold transition cursor-pointer shadow"
-                  >
-                    Yes, Delete
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setIsConfirmingDelete(false)}
-                    className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-semibold cursor-pointer"
+                    onClick={() => setShowDeleteConfirm(false)}
+                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold cursor-pointer"
                   >
                     Cancel
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (pupil && onDelete) {
+                        onDelete(pupil.id);
+                        onClose();
+                      }
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold flex items-center gap-1 shadow cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Confirm Delete</span>
+                  </button>
                 </div>
-              )
-            ) : <div />}
+              </div>
+            )}
 
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isSaving}
-                className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg transition cursor-pointer disabled:opacity-50"
-              >
-                {isSaving ? 'Saving...' : isEdit ? 'Save Changes' : 'Admit Learner'}
-              </button>
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                {isEdit && onDelete && pupil && !showDeleteConfirm && (
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="px-3 py-2 rounded-xl border border-rose-500/30 text-rose-400 hover:bg-rose-500/20 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Delete Learner</span>
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2 rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg transition cursor-pointer disabled:opacity-50"
+                >
+                  {isSaving ? 'Saving...' : isEdit ? 'Save Changes' : 'Admit Learner'}
+                </button>
+              </div>
             </div>
           </div>
         </form>
@@ -1473,10 +1499,10 @@ export const ParentModal: React.FC<ParentModalProps> = ({
   const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
-  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
-    setIsConfirmingDelete(false);
+    setShowDeleteConfirm(false);
     if (parent) {
       setName(parent.parentName || parent.name || '');
       setPhone(parent.parentPhone || parent.phone || '');
@@ -1848,57 +1874,70 @@ export const ParentModal: React.FC<ParentModalProps> = ({
           </div>
 
           {/* Actions */}
-          <div className="flex items-center justify-between pt-3 border-t border-slate-800">
-            {isEdit && onDelete ? (
-              !isConfirmingDelete ? (
-                <button
-                  type="button"
-                  onClick={() => setIsConfirmingDelete(true)}
-                  className="px-3 py-1.5 rounded-xl border border-rose-500/30 text-rose-400 hover:bg-rose-500/20 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>Delete</span>
-                </button>
-              ) : (
-                <div className="flex items-center gap-2 bg-rose-950/60 border border-rose-600/50 px-2.5 py-1 rounded-xl animate-in fade-in">
-                  <span className="text-[11px] text-rose-300 font-bold">Permanently delete?</span>
+          <div className="pt-3 border-t border-slate-800 space-y-2">
+            {showDeleteConfirm && isEdit && parent && (
+              <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/40 text-xs space-y-2">
+                <div className="flex items-center gap-2 text-rose-300 font-bold">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>Confirm Permanent Deletion of Family ({parent.parentName || parent.name})?</span>
+                </div>
+                <p className="text-[11px] text-slate-300">
+                  This will remove this family account from the guardian directory.
+                </p>
+                <div className="flex items-center justify-end gap-2 pt-1">
                   <button
                     type="button"
-                    onClick={() => {
-                      onDelete(parent.id || parent.parentPhone || parent.phone);
-                      setIsConfirmingDelete(false);
-                      onClose();
-                    }}
-                    className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-bold transition cursor-pointer shadow"
-                  >
-                    Yes, Delete
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setIsConfirmingDelete(false)}
-                    className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-semibold cursor-pointer"
+                    onClick={() => setShowDeleteConfirm(false)}
+                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold cursor-pointer"
                   >
                     Cancel
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (parent && onDelete) {
+                        onDelete(parent.id || parent.phone || parent.parentPhone || '');
+                        onClose();
+                      }
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold flex items-center gap-1 shadow cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Confirm Delete</span>
+                  </button>
                 </div>
-              )
-            ) : <div />}
+              </div>
+            )}
 
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isSaving || !isPhoneUnique}
-                className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-lg transition cursor-pointer disabled:opacity-50"
-              >
-                {isSaving ? 'Saving...' : isEdit ? 'Save Changes' : 'Add Family'}
-              </button>
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                {isEdit && onDelete && parent && !showDeleteConfirm && (
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="px-3 py-2 rounded-xl border border-rose-500/30 text-rose-400 hover:bg-rose-500/20 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Delete Family</span>
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2 rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSaving || !isPhoneUnique}
+                  className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-lg transition cursor-pointer disabled:opacity-50"
+                >
+                  {isSaving ? 'Saving...' : isEdit ? 'Save Changes' : 'Add Family'}
+                </button>
+              </div>
             </div>
           </div>
         </form>

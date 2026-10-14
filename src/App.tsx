@@ -23,7 +23,13 @@ import { BottomTabs, TabItem } from './components/BottomTabs.tsx';
 import { AdminPortal } from './components/AdminPortal.tsx';
 import { TeachersPortal } from './components/TeachersPortal.tsx';
 import { PortalDrawer } from './components/PortalDrawer.tsx';
+import { PortalSwitcherBadge } from './components/PortalSwitcherBadge.tsx';
 import { CBC_BAND_COLORS } from './styles/colors.ts';
+import {
+  downloadCBCReportCard,
+  downloadStorybook,
+  downloadHomeworkSubmission,
+} from './utils/downloadPDF.ts';
 import {
   dataLayer,
   subscribeToDataLayer,
@@ -62,7 +68,13 @@ import {
   Heart,
   Menu,
   Layers,
-  LogOut
+  LogOut,
+  BarChart3,
+  SlidersHorizontal,
+  Sun,
+  Moon,
+  Target,
+  Trophy
 } from 'lucide-react';
 
 type ScreenState = 
@@ -104,6 +116,13 @@ export default function App() {
   const handleLogout = () => {
     dataLayer.clearSession();
     setScreen('portals');
+  };
+
+  const handleSwitchPortal = (target: 'admin' | 'teachers' | 'parents' | 'learners') => {
+    if (target === 'admin') setScreen('portal_admin');
+    else if (target === 'teachers') setScreen('portal_teachers');
+    else if (target === 'parents') setScreen('portal_parents');
+    else if (target === 'learners') setScreen('portal_learners');
   };
 
   return (
@@ -241,6 +260,7 @@ export default function App() {
               mode={deviceMode}
               onBackToPortals={handleLogout}
               onSwitchToTeachers={() => setScreen('portal_teachers')}
+              onSwitchPortal={handleSwitchPortal}
             />
           )}
 
@@ -248,16 +268,23 @@ export default function App() {
             <TeachersPortal
               mode={deviceMode}
               onSwitchToAdmin={() => setScreen('portal_admin')}
+              onSwitchPortal={handleSwitchPortal}
               onExit={handleLogout}
             />
           )}
 
           {screen === 'portal_parents' && (
-            <ParentsPortalView onLogout={handleLogout} />
+            <ParentsPortalView
+              onLogout={handleLogout}
+              onSwitchPortal={handleSwitchPortal}
+            />
           )}
 
           {screen === 'portal_learners' && (
-            <LearnersPortalView onLogout={handleLogout} />
+            <LearnersPortalView
+              onLogout={handleLogout}
+              onSwitchPortal={handleSwitchPortal}
+            />
           )}
         </div>
       </main>
@@ -269,7 +296,13 @@ export default function App() {
  * PARENTS & GUARDIANS PORTAL VIEW
  * Full implementation for all 5 tabs: Today, Homework, CBC Reports, Focus Zone, Notices
  */
-function ParentsPortalView({ onLogout }: { onLogout: () => void }) {
+function ParentsPortalView({
+  onLogout,
+  onSwitchPortal,
+}: {
+  onLogout: () => void;
+  onSwitchPortal?: (portal: 'admin' | 'teachers' | 'parents' | 'learners') => void;
+}) {
   const [activeTab, setActiveTab] = useState<'today' | 'homework' | 'reports' | 'focus' | 'noticeboard'>('today');
   const [showParentDrawer, setShowParentDrawer] = useState(false);
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -361,6 +394,12 @@ function ParentsPortalView({ onLogout }: { onLogout: () => void }) {
         onOpenMenu={() => setShowParentDrawer(true)}
         showLogout={true}
         onLogout={onLogout}
+        rightAction={
+          <PortalSwitcherBadge
+            currentPortal="parents"
+            onSwitchPortal={onSwitchPortal}
+          />
+        }
       />
 
       {/* Sibling Switcher Bar if multiple children */}
@@ -565,7 +604,22 @@ function ParentsPortalView({ onLogout }: { onLogout: () => void }) {
                   </div>
                   <h4 className="text-sm font-bold text-white">Clean Water & Soil Conservation</h4>
                   <p className="text-xs text-slate-300">Teacher Remarks: &quot;Excellent diagram and neat handwriting, well done!&quot;</p>
-                  <div className="pt-1 text-[10px] text-slate-400">Marked by Tr. Kelvin • EE Badge awarded</div>
+                  <div className="pt-2 flex items-center justify-between border-t border-slate-800 text-[10px] text-slate-400">
+                    <span>Marked by Tr. Kelvin • EE Badge awarded</span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        downloadHomeworkSubmission(
+                          'Clean Water & Soil Conservation',
+                          `LITTLE ROSES ACADEMY\nHOMEWORK SUBMISSION & FEEDBACK\n\nLearner: ${currentChild.name}\nUPI: ${currentChild.upi}\nGrade: ${currentChild.grade}\nSubject: Environmental Activities\nTopic: Clean Water & Soil Conservation\nScore: 18 / 20 (90% - Exceeding Expectations)\nTeacher Feedback: Excellent diagram and neat handwriting, well done!\nStatus: Marked & Verified\nDate: ${new Date().toLocaleDateString()}`
+                        )
+                      }
+                      className="px-2.5 py-1 rounded-lg bg-emerald-600/30 hover:bg-emerald-600 text-emerald-200 hover:text-white text-[10px] font-bold border border-emerald-500/40 flex items-center gap-1 transition cursor-pointer"
+                    >
+                      <Download className="w-3 h-3" />
+                      <span>Download Feedback</span>
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -660,11 +714,26 @@ function ParentsPortalView({ onLogout }: { onLogout: () => void }) {
                 </p>
                 <button
                   type="button"
-                  onClick={() => alert('Official CBC Report Card generated with school logo and signed by Principal.')}
-                  className="w-full py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs shadow flex items-center justify-center gap-1.5 transition active:scale-95"
+                  onClick={() =>
+                    downloadCBCReportCard(currentChild.name, currentChild.upi, currentChild.grade, {
+                      term: selectedTerm,
+                      standing: 'Meeting Expectations (ME) • Overall 81.2%',
+                      subjects: [
+                        { subject: 'Mathematical Activities', cat: 54, asg: 36, total: 90, band: 'EE' },
+                        { subject: 'English Language Activities', cat: 48, asg: 32, total: 80, band: 'EE' },
+                        { subject: 'Shughuli za Kiswahili', cat: 42, asg: 30, total: 72, band: 'ME' },
+                        { subject: 'Environmental Activities', cat: 44, asg: 31, total: 75, band: 'ME' },
+                        { subject: 'CRE Activities', cat: 46, asg: 32, total: 78, band: 'ME' },
+                        { subject: 'Creative Activities', cat: 50, asg: 35, total: 85, band: 'EE' },
+                      ],
+                      remark:
+                        'Faith is a dedicated and bright pupil. Keep maintaining high standards in Mathematics and Reading.',
+                    })
+                  }
+                  className="w-full py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs shadow flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer"
                 >
                   <Download className="w-3.5 h-3.5" />
-                  <span>Download Official CBC Report Card (PDF)</span>
+                  <span>Download Official CBC Report Card (PDF / Report)</span>
                 </button>
               </div>
             </div>
@@ -752,6 +821,8 @@ function ParentsPortalView({ onLogout }: { onLogout: () => void }) {
         portalSubtitle="Little Roses Academy"
         userName={session?.name || currentChild?.parentName || 'Parent / Guardian'}
         userBadge={currentChild ? `Ward: ${currentChild.name} (${currentChild.grade})` : undefined}
+        currentPortal="parents"
+        onSwitchPortal={onSwitchPortal}
         navItems={[
           {
             id: 'today',
@@ -845,7 +916,13 @@ function ParentsPortalView({ onLogout }: { onLogout: () => void }) {
  * LEARNERS PORTAL VIEW
  * Full implementation for all 5 tabs: Today, Timetable, Homework, Storybooks, Me
  */
-function LearnersPortalView({ onLogout }: { onLogout: () => void }) {
+function LearnersPortalView({
+  onLogout,
+  onSwitchPortal,
+}: {
+  onLogout: () => void;
+  onSwitchPortal?: (portal: 'admin' | 'teachers' | 'parents' | 'learners') => void;
+}) {
   const [activeTab, setActiveTab] = useState<'today' | 'timetable' | 'homework' | 'storybooks' | 'me'>('today');
   const [showLearnerDrawer, setShowLearnerDrawer] = useState(false);
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -875,11 +952,11 @@ function LearnersPortalView({ onLogout }: { onLogout: () => void }) {
   const learnerResidence = currentPupil?.residence || session?.residence;
 
   const tabs: TabItem[] = [
-    { id: 'today', label: 'Today', icon: <Home className="w-5 h-5" /> },
+    { id: 'today', label: 'Home', icon: <Home className="w-5 h-5" /> },
     { id: 'timetable', label: 'Timetable', icon: <Calendar className="w-5 h-5" /> },
     { id: 'homework', label: 'Homework', icon: <BookOpen className="w-5 h-5" /> },
-    { id: 'storybooks', label: 'Storybooks', icon: <Sparkles className="w-5 h-5" /> },
-    { id: 'me', label: 'Me', icon: <Users className="w-5 h-5" /> },
+    { id: 'me', label: 'Progress', icon: <BarChart3 className="w-5 h-5" /> },
+    { id: 'more', label: 'More', icon: <SlidersHorizontal className="w-5 h-5" /> },
   ];
 
   return (
@@ -892,6 +969,12 @@ function LearnersPortalView({ onLogout }: { onLogout: () => void }) {
         onOpenMenu={() => setShowLearnerDrawer(true)}
         showLogout={true}
         onLogout={onLogout}
+        rightAction={
+          <PortalSwitcherBadge
+            currentPortal="learners"
+            onSwitchPortal={onSwitchPortal}
+          />
+        }
       />
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3.5">
@@ -1091,10 +1174,23 @@ function LearnersPortalView({ onLogout }: { onLogout: () => void }) {
                 )}
               </div>
             ) : (
-              <div className="p-4 rounded-2xl bg-slate-900 border border-emerald-500/40 text-center py-6">
-                <CheckCircle className="w-8 h-8 text-emerald-400 mx-auto mb-2" />
+              <div className="p-4 rounded-2xl bg-slate-900 border border-emerald-500/40 text-center py-6 space-y-2">
+                <CheckCircle className="w-8 h-8 text-emerald-400 mx-auto mb-1" />
                 <h4 className="text-xs font-bold text-white">All previous homework submitted!</h4>
-                <p className="text-[10px] text-slate-400 mt-1">4 tasks evaluated by class teachers.</p>
+                <p className="text-[10px] text-slate-400">4 tasks evaluated by class teachers.</p>
+                <button
+                  type="button"
+                  onClick={() =>
+                    downloadHomeworkSubmission(
+                      'Mathematics Division Task',
+                      `LITTLE ROSES ACADEMY - CBC HOMEWORK RECORD\n\nLearner: ${learnerName}\nUPI: ${learnerUpi}\nGrade: ${learnerGrade}\nTask: Mathematics Division (48 ÷ 6 = 8)\nStatus: Completed & Verified (100% Score)\nEvaluated by: Class Teacher\nRecorded: ${new Date().toLocaleDateString()}\nLittle Roses Academy • Nakuru, Kenya`
+                    )
+                  }
+                  className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow inline-flex items-center gap-1.5 transition cursor-pointer mt-1"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download Homework Receipt</span>
+                </button>
               </div>
             )}
           </div>
@@ -1115,22 +1211,51 @@ function LearnersPortalView({ onLogout }: { onLogout: () => void }) {
 
             <div className="space-y-2">
               {[
-                { title: 'The Clever Hare and Hyena', lang: 'English', pages: '6 pages', stars: '3 Stars ⭐⭐⭐' },
-                { title: 'Sungura na Kobe Mwerevu', lang: 'Kiswahili', pages: '8 pages', stars: '2 Stars ⭐⭐' },
-                { title: 'The Great Baobab Tree', lang: 'English', pages: '5 pages', stars: 'Completed ✔' },
+                {
+                  title: 'The Clever Hare and Hyena',
+                  lang: 'English',
+                  pages: '6 pages',
+                  stars: '3 Stars ⭐⭐⭐',
+                  content: `THE CLEVER HARE AND HYENA\nLittle Roses Academy CBC Reader\n\nOnce upon a time in Nakuru, Hare and Hyena went searching for honey. Hare was clever and prepared a ladder, while Hyena was hasty and forgot his tools...\n\nMoral: Preparation and patience bring success!`,
+                },
+                {
+                  title: 'Sungura na Kobe Mwerevu',
+                  lang: 'Kiswahili',
+                  pages: '8 pages',
+                  stars: '2 Stars ⭐⭐',
+                  content: `SUNGURA NA KOBE MWEREVU\nShule ya Little Roses Academy Hadithi ya CBC\n\nHapo zamani, Sungura alijigamba kuwa ana mbio zaidi ya wanyama wote. Kobe akamwambia, 'Mbio si nguvu bali ni ustahimilivu.'\n\nFunzo: Bidii na utulivu hushinda maringo!`,
+                },
+                {
+                  title: 'The Great Baobab Tree',
+                  lang: 'English',
+                  pages: '5 pages',
+                  stars: 'Completed ✔',
+                  content: `THE GREAT BAOBAB TREE\nLittle Roses Academy CBC Environmental Reader\n\nIn the school garden stands a lovely baobab seedling. The pupils water it every Friday during Environmental Activities...\n\nMoral: Taking care of our plants keeps Kenya green!`,
+                },
               ].map((book, idx) => (
-                <div key={idx} className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-between">
-                  <div>
+                <div key={idx} className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-between gap-2">
+                  <div className="min-w-0">
                     <span className="text-[10px] text-pink-400 font-bold">{book.lang}</span>
-                    <h4 className="text-xs font-extrabold text-white mt-0.5">{book.title}</h4>
+                    <h4 className="text-xs font-extrabold text-white mt-0.5 truncate">{book.title}</h4>
                     <p className="text-[10px] text-slate-400">{book.pages} • CBC Level 2 Reader</p>
                   </div>
-                  <button
-                    onClick={() => alert(`Opening "${book.title}". Offline reader loaded!`)}
-                    className="px-3 py-1.5 rounded-xl bg-pink-500 hover:bg-pink-400 text-slate-950 text-xs font-bold shadow transition cursor-pointer"
-                  >
-                    Read Book
-                  </button>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => downloadStorybook(book.title, book.content)}
+                      className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition cursor-pointer"
+                      title="Download Storybook (Offline txt/pdf)"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => alert(`Opening "${book.title}". Offline reader loaded!`)}
+                      className="px-3 py-1.5 rounded-xl bg-pink-500 hover:bg-pink-400 text-slate-950 text-xs font-bold shadow transition cursor-pointer"
+                    >
+                      Read Book
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -1138,59 +1263,112 @@ function LearnersPortalView({ onLogout }: { onLogout: () => void }) {
         )}
 
         {/* =====================================================================
-            TAB 5: ME & PROFILE
+            TAB 4: PROGRESS (EXACT MATCH WITH MY PROGRESS SCREENSHOT)
             ===================================================================== */}
         {activeTab === 'me' && (
-          <div className="space-y-3">
-            {/* Profile Card */}
-            <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col items-center text-center">
-              <div className="w-16 h-16 rounded-full bg-purple-500/20 border-2 border-purple-400 overflow-hidden flex items-center justify-center text-3xl mb-2 shadow">
-                {learnerPhoto ? (
-                  <img src={learnerPhoto} alt={learnerName} className="w-full h-full object-cover" />
-                ) : (
-                  <span>👧🏾</span>
-                )}
+          <div className="space-y-4">
+            {/* Understanding My CBC Performance Card */}
+            <div className="p-4 rounded-3xl bg-slate-900 border border-slate-800 space-y-3.5 shadow-md">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-amber-400">
+                <Star className="w-4 h-4 fill-amber-400" />
+                <span>Understanding My CBC Performance</span>
               </div>
-              <h3 className="text-sm font-black text-white">{learnerName}</h3>
-              <p className="text-xs font-mono text-purple-300">UPI: {learnerUpi}</p>
-              <div className="mt-2 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-950 border border-slate-800 text-[10px] text-slate-400">
-                <span>{learnerGrade} • Little Roses Academy</span>
-                {learnerResidence && <span>• {learnerResidence}</span>}
+              <p className="text-[11px] text-slate-400">
+                My progress is shown using simple, friendly rings across all learning areas.
+              </p>
+
+              {/* 4 Performance Level Rings (EE, ME, AE, BE) */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
+                {/* EE */}
+                <div className="p-3 rounded-2xl bg-emerald-950/40 border border-emerald-500/30 flex flex-col items-center text-center">
+                  <div className="w-12 h-12 rounded-full border-4 border-emerald-400 flex items-center justify-center text-emerald-300 font-black text-sm mb-1.5 shadow-sm">
+                    EE
+                  </div>
+                  <span className="text-[11px] font-bold text-emerald-300">Exceeding Expectations</span>
+                  <span className="text-[9px] text-slate-400 mt-0.5">I'm doing amazing! 🌟</span>
+                </div>
+
+                {/* ME */}
+                <div className="p-3 rounded-2xl bg-blue-950/40 border border-blue-500/30 flex flex-col items-center text-center">
+                  <div className="w-12 h-12 rounded-full border-4 border-blue-400 flex items-center justify-center text-blue-300 font-black text-sm mb-1.5 shadow-sm">
+                    ME
+                  </div>
+                  <span className="text-[11px] font-bold text-blue-300">Meeting Expectations</span>
+                  <span className="text-[9px] text-slate-400 mt-0.5">I'm on the right track! 👍</span>
+                </div>
+
+                {/* AE */}
+                <div className="p-3 rounded-2xl bg-amber-950/40 border border-amber-500/30 flex flex-col items-center text-center">
+                  <div className="w-12 h-12 rounded-full border-4 border-amber-400 flex items-center justify-center text-amber-300 font-black text-sm mb-1.5 shadow-sm">
+                    AE
+                  </div>
+                  <span className="text-[11px] font-bold text-amber-300">Approaching Expectations</span>
+                  <span className="text-[9px] text-slate-400 mt-0.5">I'm getting there! 💪</span>
+                </div>
+
+                {/* BE */}
+                <div className="p-3 rounded-2xl bg-rose-950/40 border border-rose-500/30 flex flex-col items-center text-center">
+                  <div className="w-12 h-12 rounded-full border-4 border-rose-400 flex items-center justify-center text-rose-300 font-black text-sm mb-1.5 shadow-sm">
+                    BE
+                  </div>
+                  <span className="text-[11px] font-bold text-rose-300">Beginning Expectations</span>
+                  <span className="text-[9px] text-slate-400 mt-0.5">I'm ready to grow! 🌱</span>
+                </div>
               </div>
             </div>
 
-            {/* Badges Collection */}
-            <div className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 space-y-2">
-              <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1">
-                <Award className="w-3.5 h-3.5" />
-                <span>My CBC Achievement Badges</span>
-              </h4>
-
-              <div className="grid grid-cols-3 gap-2 text-center pt-1">
-                <div className="p-2.5 rounded-xl bg-emerald-950/60 border border-emerald-500/40">
-                  <div className="text-xs font-black text-emerald-300">EE</div>
-                  <div className="text-[9px] text-slate-300 mt-0.5">Maths</div>
-                  <div className="text-[8px] text-emerald-400">Exceeding</div>
+            {/* My Subject Progress Section */}
+            <div className="p-4 rounded-3xl bg-slate-900 border border-slate-800 space-y-3.5 shadow-md">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">📚</span>
+                  <h3 className="text-sm font-bold text-white">My Subject Progress</h3>
                 </div>
+                <span className="text-[10px] font-mono font-bold text-blue-400 bg-blue-950/60 px-2 py-0.5 rounded-full border border-blue-800/60">
+                  Term 1 • Active
+                </span>
+              </div>
 
-                <div className="p-2.5 rounded-xl bg-emerald-950/60 border border-emerald-500/40">
-                  <div className="text-xs font-black text-emerald-300">EE</div>
-                  <div className="text-[9px] text-slate-300 mt-0.5">English</div>
-                  <div className="text-[8px] text-emerald-400">Exceeding</div>
-                </div>
-
-                <div className="p-2.5 rounded-xl bg-blue-950/60 border border-blue-500/40">
-                  <div className="text-xs font-black text-blue-300">ME</div>
-                  <div className="text-[9px] text-slate-300 mt-0.5">Kiswahili</div>
-                  <div className="text-[8px] text-blue-400">Meeting</div>
-                </div>
+              {/* Progress Bars */}
+              <div className="space-y-3 pt-1">
+                {[
+                  { name: 'English', score: 85, level: 'EE', color: 'from-emerald-500 to-green-400', badgeColor: 'text-emerald-400 border-emerald-500/50 bg-emerald-950/60' },
+                  { name: 'Mathematics', score: 78, level: 'ME', color: 'from-blue-500 to-cyan-400', badgeColor: 'text-blue-400 border-blue-500/50 bg-blue-950/60' },
+                  { name: 'Science', score: 72, level: 'AE', color: 'from-purple-500 to-indigo-400', badgeColor: 'text-purple-400 border-purple-500/50 bg-purple-950/60' },
+                  { name: 'Social Studies', score: 68, level: 'AE', color: 'from-pink-500 to-rose-400', badgeColor: 'text-rose-400 border-rose-500/50 bg-rose-950/60' },
+                  { name: 'Creative Arts', score: 92, level: 'EE', color: 'from-teal-500 to-emerald-400', badgeColor: 'text-teal-400 border-teal-500/50 bg-teal-950/60' },
+                  { name: 'Physical Education', score: 88, level: 'EE', color: 'from-amber-500 to-orange-400', badgeColor: 'text-amber-400 border-amber-500/50 bg-amber-950/60' },
+                ].map((subj) => (
+                  <div key={subj.name} className="flex items-center gap-3 text-xs">
+                    <span className="w-28 font-bold text-slate-200 truncate">{subj.name}</span>
+                    <div className="flex-1 h-2 rounded-full bg-slate-800 overflow-hidden">
+                      <div
+                        className={`h-full rounded-full bg-gradient-to-r ${subj.color}`}
+                        style={{ width: `${subj.score}%` }}
+                      />
+                    </div>
+                    <span className="font-mono text-xs font-bold text-slate-300 w-9 text-right">{subj.score}%</span>
+                    <span className={`w-7 h-6 rounded-full border text-[10px] font-black flex items-center justify-center ${subj.badgeColor}`}>
+                      {subj.level}
+                    </span>
+                  </div>
+                ))}
               </div>
             </div>
 
-            {/* Offline Status */}
-            <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-400 flex items-center justify-between">
-              <span>Saved Offline Work:</span>
-              <span className="text-emerald-400 font-bold">All Synced 💾</span>
+            {/* You're Doing GREAT! Encouragement Trophy Banner */}
+            <div className="p-4 rounded-3xl bg-gradient-to-r from-amber-500/20 via-blue-500/10 to-purple-500/20 border border-amber-400/40 flex items-center gap-3.5 shadow-md">
+              <div className="w-12 h-12 rounded-2xl bg-amber-400/20 border border-amber-400/50 flex items-center justify-center shrink-0">
+                <Trophy className="w-6 h-6 text-amber-400" />
+              </div>
+              <div>
+                <h4 className="text-xs sm:text-sm font-black text-amber-300 uppercase tracking-wide">
+                  You're doing GREAT! 🌟
+                </h4>
+                <p className="text-[11px] text-slate-300 mt-0.5 leading-snug">
+                  Keep learning, keep shining, the best is yet to come!
+                </p>
+              </div>
             </div>
           </div>
         )}
@@ -1199,8 +1377,14 @@ function LearnersPortalView({ onLogout }: { onLogout: () => void }) {
 
       <BottomTabs
         tabs={tabs}
-        activeTab={activeTab}
-        onSelectTab={(id) => setActiveTab(id as any)}
+        activeTab={activeTab === 'me' ? 'me' : activeTab}
+        onSelectTab={(id) => {
+          if (id === 'more') {
+            setShowLearnerDrawer(true);
+          } else {
+            setActiveTab(id as any);
+          }
+        }}
         accentColor="#A855F7"
       />
 
@@ -1212,6 +1396,8 @@ function LearnersPortalView({ onLogout }: { onLogout: () => void }) {
         portalSubtitle="Little Roses Academy"
         userName={learnerName}
         userBadge={learnerUpi}
+        currentPortal="learners"
+        onSwitchPortal={onSwitchPortal}
         navItems={[
           {
             id: 'today',

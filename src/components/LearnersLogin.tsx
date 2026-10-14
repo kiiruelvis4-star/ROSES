@@ -13,20 +13,78 @@ export function LearnersLogin({ onBack, onSuccess }: LearnersLoginProps) {
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [lockoutUntil, setLockoutUntil] = useState<number>(() => {
+    try {
+      const stored = localStorage.getItem('lra_learner_lockout_ts');
+      if (stored) {
+        const val = parseInt(stored, 10);
+        return val > Date.now() ? val : 0;
+      }
+    } catch {}
+    return 0;
+  });
+
+  const getFailedAttempts = (cleanUpi: string): number => {
+    try {
+      const stored = localStorage.getItem(`lra_learner_fails_${cleanUpi}`);
+      return stored ? parseInt(stored, 10) : 0;
+    } catch {
+      return 0;
+    }
+  };
+
+  const recordFailedAttempt = (cleanUpi: string): { attempts: number; isLocked: boolean; remaining: number } => {
+    const current = getFailedAttempts(cleanUpi) + 1;
+    try {
+      localStorage.setItem(`lra_learner_fails_${cleanUpi}`, current.toString());
+      if (current >= 5) {
+        const until = Date.now() + 15 * 60 * 1000; // 15-minute lockout
+        localStorage.setItem('lra_learner_lockout_ts', until.toString());
+        setLockoutUntil(until);
+        return { attempts: current, isLocked: true, remaining: 0 };
+      }
+    } catch {}
+    return { attempts: current, isLocked: false, remaining: 5 - current };
+  };
+
+  const clearFailedAttempts = (cleanUpi: string) => {
+    try {
+      localStorage.removeItem(`lra_learner_fails_${cleanUpi}`);
+      localStorage.removeItem('lra_learner_lockout_ts');
+      setLockoutUntil(0);
+    } catch {}
+  };
+
+  const isCurrentlyLocked = lockoutUntil > Date.now();
+  const minutesRemaining = Math.max(1, Math.ceil((lockoutUntil - Date.now()) / (60 * 1000)));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    if (!upi.trim() || !pin.trim()) {
+    if (isCurrentlyLocked) {
+      setError(`Account is temporarily locked due to repeated incorrect PIN attempts. Try again in ${minutesRemaining} minute(s) or ask your class teacher/parent to verify your PIN.`);
+      return;
+    }
+
+    const cleanUpi = upi.trim().toUpperCase();
+    const cleanPin = pin.trim();
+
+    if (!cleanUpi || !cleanPin) {
       setError('Please enter your School UPI number and 4-digit PIN.');
+      return;
+    }
+
+    if (cleanPin.length < 4) {
+      setError('PIN must be at least 4 digits.');
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const pupil = await dataLayer.verifyLearnerLogin(upi, pin);
+      const pupil = await dataLayer.verifyLearnerLogin(cleanUpi, cleanPin);
       if (pupil) {
+        clearFailedAttempts(cleanUpi);
         dataLayer.setSession({
           role: 'learner',
           id: pupil.id,
@@ -38,10 +96,15 @@ export function LearnersLogin({ onBack, onSuccess }: LearnersLoginProps) {
         });
         onSuccess();
       } else {
-        setError('Incorrect UPI or PIN. Check your admission card and try again.');
+        const { isLocked, remaining } = recordFailedAttempt(cleanUpi);
+        if (isLocked) {
+          setError('Security lockout triggered: 5 failed PIN attempts. Access locked for 15 minutes. Contact your class teacher to reset your PIN.');
+        } else {
+          setError(`Incorrect UPI or PIN. ${remaining} attempt(s) remaining before a 15-minute security lockout.`);
+        }
       }
     } catch {
-      setError('Authentication error occurred.');
+      setError('Authentication error occurred. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

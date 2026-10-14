@@ -1,14 +1,8 @@
-/**
- * Little Roses Academy - Shared Mobile Header
- * 
- * Includes: Logo, Title, Real Connection Pill, Term & Week info, and Action button
- */
-
 import React, { useState, useEffect } from 'react';
 import { Logo } from './Logo.tsx';
 import { ConnectionPill } from './ConnectionPill.tsx';
 import { dataLayer, subscribeToDataLayer } from '../services/dataLayer.ts';
-import { LogOut, ArrowLeft, Menu } from 'lucide-react';
+import { LogOut, ArrowLeft, Menu, Sun, Moon } from 'lucide-react';
 import { PWAInstallButton } from './PWAInstallButton.tsx';
 
 interface HeaderProps {
@@ -30,66 +24,71 @@ export const Header: React.FC<HeaderProps> = ({
   photoUrl,
   showBack = false,
   onBack,
-  showMenu = false,
+  showMenu = true,
   onOpenMenu,
   showLogout = false,
   onLogout,
   rightAction,
 }) => {
   const [termInfo, setTermInfo] = useState(dataLayer.getAcademicTermInfo());
+  const [themeMode, setThemeMode] = useState<'light' | 'dark'>(() => {
+    return dataLayer.getEffectiveTheme();
+  });
 
   useEffect(() => {
-    const update = () => setTermInfo(dataLayer.getAcademicTermInfo());
+    const update = () => {
+      setTermInfo(dataLayer.getAcademicTermInfo());
+      setThemeMode(dataLayer.getEffectiveTheme());
+    };
     return subscribeToDataLayer(update);
   }, []);
 
+  const handleToggleTheme = () => {
+    const nextTheme = themeMode === 'dark' ? 'light' : 'dark';
+    dataLayer.saveAppearanceConfig({ themeMode: nextTheme });
+    dataLayer.applyTheme({ ...dataLayer.getAppearanceConfig(), themeMode: nextTheme });
+    setThemeMode(nextTheme);
+  };
+
   return (
-    <header className="sticky top-0 z-40 w-full bg-[#070D1E]/95 backdrop-blur-md border-b border-slate-800/80 px-3 py-2 text-white shadow-md">
-      <div className="flex items-center justify-between gap-2">
-        {/* Left: 3-line Hamburger Menu, Back button, or School Logo */}
-        <div className="flex items-center gap-2">
-          {showMenu && onOpenMenu ? (
+    <header className="sticky top-0 z-40 w-full bg-gradient-to-r from-[#0a1e4a] via-[#0d2b6b] to-[#0a1e4a] rounded-b-2xl sm:rounded-b-3xl shadow-xl px-3.5 py-2.5 sm:py-3 text-white border-b border-blue-900/50 backdrop-blur-md">
+      <div className="flex items-center justify-between gap-2 max-w-7xl mx-auto">
+        {/* Left: 3-line Hamburger Menu, Back button, and Official Round Logo */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          {showMenu && onOpenMenu && (
             <button
               onClick={onOpenMenu}
-              className="p-1.5 rounded-lg bg-slate-800/90 hover:bg-slate-700 text-amber-300 hover:text-white transition active:scale-95 cursor-pointer border border-slate-700/60"
-              title="Open portal menu (excesses & tools)"
-              aria-label="Open portal menu"
+              className="p-1.5 sm:p-2 rounded-xl bg-blue-950/80 hover:bg-blue-900/90 text-amber-300 hover:text-white transition active:scale-95 cursor-pointer border border-blue-800/60 shadow-sm"
+              title="Open full menu and excess tabs (≡)"
+              aria-label="Open portal navigation menu"
             >
-              <Menu className="w-4 h-4" />
+              <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
-          ) : null}
+          )}
 
-          {showBack && onBack ? (
+          {showBack && onBack && (
             <button
               onClick={onBack}
-              className="p-1.5 rounded-full bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition active:scale-95"
+              className="p-1.5 sm:p-2 rounded-xl bg-blue-950/80 hover:bg-blue-900/90 text-slate-200 hover:text-white transition active:scale-95 cursor-pointer border border-blue-800/60 shadow-sm"
               title="Go back"
+              aria-label="Go back to previous view"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
-          ) : null}
+          )}
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 sm:gap-2.5">
             <Logo size="xs" showTagline={false} />
-            {(photoUrl || dataLayer.getCurrentSession()?.photoUrl) && (
-              <div className="w-7 h-7 rounded-full border border-amber-400/80 overflow-hidden shrink-0 shadow bg-slate-900">
-                <img
-                  src={photoUrl || dataLayer.getCurrentSession()?.photoUrl}
-                  alt="Profile"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            )}
             <div>
-              <h1 className="text-xs font-black tracking-wider uppercase text-slate-100 leading-tight">
+              <h1 className="text-sm sm:text-base font-black tracking-wide text-white leading-tight drop-shadow-sm line-clamp-1">
                 {title || 'Little Roses Academy'}
               </h1>
-              <div className="flex items-center gap-1.5 text-[10px] text-slate-400">
+              <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] text-blue-200/90 font-medium">
                 {subtitle ? (
-                  <span>{subtitle}</span>
+                  <span className="line-clamp-1">{subtitle}</span>
                 ) : (
                   <>
-                    <span className="text-amber-400 font-semibold">{termInfo.term}</span>
+                    <span className="text-amber-300 font-bold">{termInfo.term}</span>
                     <span>•</span>
                     <span>Week {termInfo.weekNumber}</span>
                   </>
@@ -99,8 +98,33 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Right: Sync Status Pill + Optional Install / Actions / Logout */}
+        {/* Right: Quick Theme Switcher, Avatar, Sync Pill & Actions */}
         <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* 1-Tap Light/Dark Mode Switcher */}
+          <button
+            onClick={handleToggleTheme}
+            className="p-1.5 sm:p-2 rounded-xl bg-blue-950/80 hover:bg-blue-900/90 text-amber-300 hover:text-amber-200 border border-blue-800/60 transition active:scale-95 cursor-pointer shadow-sm flex items-center justify-center"
+            title={`Switch to ${themeMode === 'dark' ? 'Light' : 'Dark'} Mode`}
+            aria-label="Toggle dark and light theme"
+          >
+            {themeMode === 'dark' ? (
+              <Sun className="w-4 h-4 text-amber-300" />
+            ) : (
+              <Moon className="w-4 h-4 text-slate-200" />
+            )}
+          </button>
+
+          {/* User Photo Avatar */}
+          {(photoUrl || dataLayer.getCurrentSession()?.photoUrl) && (
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border-2 border-amber-400 overflow-hidden shrink-0 shadow bg-slate-900">
+              <img
+                src={photoUrl || dataLayer.getCurrentSession()?.photoUrl}
+                alt="User Profile"
+                className="w-full h-full object-cover"
+              />
+            </div>
+          )}
+
           <PWAInstallButton compact />
           <ConnectionPill />
 
@@ -109,10 +133,11 @@ export const Header: React.FC<HeaderProps> = ({
           {showLogout && onLogout && (
             <button
               onClick={onLogout}
-              className="p-1.5 rounded-full bg-slate-800/80 hover:bg-rose-900/60 text-slate-300 hover:text-rose-200 transition"
+              className="p-1.5 sm:p-2 rounded-xl bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 hover:text-white border border-rose-800/40 transition active:scale-95 cursor-pointer shadow-sm"
               title="Sign Out"
+              aria-label="Sign out"
             >
-              <LogOut className="w-3.5 h-3.5" />
+              <LogOut className="w-4 h-4" />
             </button>
           )}
         </div>
@@ -120,3 +145,4 @@ export const Header: React.FC<HeaderProps> = ({
     </header>
   );
 };
+

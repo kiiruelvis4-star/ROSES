@@ -35,6 +35,8 @@ export interface PortalDrawerProps {
   portalSubtitle?: string;
   userBadge?: string;
   userName?: string;
+  currentPortal?: 'admin' | 'teachers' | 'parents' | 'learners';
+  onSwitchPortal?: (portal: 'admin' | 'teachers' | 'parents' | 'learners') => void;
   navItems: DrawerNavItem[];
   toolItems?: DrawerToolItem[];
   footerActions?: Array<{
@@ -52,6 +54,8 @@ export const PortalDrawer: React.FC<PortalDrawerProps> = ({
   portalSubtitle,
   userBadge,
   userName,
+  currentPortal,
+  onSwitchPortal,
   navItems,
   toolItems = [],
   footerActions = [],
@@ -135,6 +139,76 @@ export const PortalDrawer: React.FC<PortalDrawerProps> = ({
               ))}
             </div>
           </div>
+
+          {/* Connected School Portals Linker */}
+          {onSwitchPortal && (
+            <div className="pt-2 border-t border-slate-800/80">
+              <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider px-2 block mb-1">
+                Connected School Portals
+              </span>
+              <div className="space-y-1">
+                {[
+                  {
+                    id: 'admin' as const,
+                    label: 'School Office (Admin)',
+                    icon: '🏛️',
+                    desc: 'Head office, registry & curriculum bank',
+                  },
+                  {
+                    id: 'teachers' as const,
+                    label: 'Teachers Curriculum Studio',
+                    icon: '👨‍🏫',
+                    desc: 'Classes, timetable, lesson notes & CATs',
+                  },
+                  {
+                    id: 'parents' as const,
+                    label: 'Parents & Guardians Portal',
+                    icon: '👨‍👩‍👧',
+                    desc: 'Pupil reports, homework push & fees',
+                  },
+                  {
+                    id: 'learners' as const,
+                    label: 'Learners Study Zone',
+                    icon: '🎒',
+                    desc: 'CBC learning activities & badges',
+                  },
+                ].map((p) => {
+                  const isActive = currentPortal === p.id;
+                  return (
+                    <button
+                      key={p.id}
+                      onClick={() => {
+                        onClose();
+                        if (!isActive) onSwitchPortal(p.id);
+                      }}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        isActive
+                          ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
+                          : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="text-base shrink-0">{p.icon}</span>
+                        <div className="text-left min-w-0">
+                          <span className="block truncate">{p.label}</span>
+                          <span className="text-[10px] text-slate-400 font-normal block truncate">
+                            {p.desc}
+                          </span>
+                        </div>
+                      </div>
+                      {isActive ? (
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-cyan-400 text-slate-950 font-black uppercase shrink-0">
+                          Active
+                        </span>
+                      ) : (
+                        <ChevronRight className="w-3.5 h-3.5 opacity-40 shrink-0" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Excess Tools & Actions */}
           {toolItems.length > 0 && (

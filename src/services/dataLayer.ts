@@ -701,9 +701,39 @@ export interface ResourceVersion {
   author?: string;
 }
 
+export interface ResourceDocumentItem {
+  id: string;
+  name: string;
+  size?: string;
+  sizeBytes?: number;
+  content?: string;
+  htmlContent?: string;
+  fileData?: string;
+  fileType?: string;
+  extractionStatus?: 'success' | 'failed' | 'pending' | 'unsupported';
+  extractionError?: string;
+  spreadsheetData?: { headers: string[]; rows: string[][] };
+  worksheets?: Array<{ name: string; headers: string[]; rows: string[][]; rowCount: number; colCount: number }>;
+  slides?: Array<{ slideNumber: number; title: string; content: string }>;
+  pageCount?: number;
+  versions?: ResourceVersion[];
+}
+
+export interface ResourcePackageFilter {
+  teacherId?: string;
+  grade?: string;
+  subject?: string;
+  category?: string;
+  term?: string;
+  portalRole?: 'admin' | 'teacher' | 'learner' | 'parent';
+  onlyLearnerApproved?: boolean;
+  searchQuery?: string;
+}
+
 export interface ResourcePackageRecord {
   id: string;
   packageName: string;
+  description?: string;
   category: string;
   grade: string;
   subject: string;
@@ -711,18 +741,15 @@ export interface ResourcePackageRecord {
   subStrand?: string;
   academicYear: string;
   term: string;
-  documents: {
-    id: string;
-    name: string;
-    size?: string;
-    sizeBytes?: number;
-    content?: string;
-    fileData?: string;
-    fileType?: string;
-    spreadsheetData?: { headers: string[]; rows: string[][] };
-    versions?: ResourceVersion[];
-  }[];
+  documents: ResourceDocumentItem[];
   recipientTeacherIds: string[];
+  uploaderRole?: 'admin' | 'teacher';
+  uploaderId?: string;
+  uploaderName?: string;
+  isLearnerApproved?: boolean;
+  isParentVisible?: boolean;
+  isArchived?: boolean;
+  status?: 'active' | 'archived' | 'draft';
   createdAt: string;
   updatedAt?: string;
 }
@@ -3325,10 +3352,297 @@ class SchoolDataLayer {
     }
   }
 
-  public getResourcePackages(teacherId?: string): ResourcePackageRecord[] {
+  private generateInitialResourcePackages(): ResourcePackageRecord[] {
+    const now = new Date().toISOString();
+    return [
+      {
+        id: 'pkg_elvis_math_5_scheme',
+        packageName: 'Grade 5 Mathematics - Term 1 CBC Scheme of Work',
+        description: 'Official KICD CBC aligned termly scheme of work covering Whole Numbers, Place Value, Operations & Fractions.',
+        category: 'Schemes of Work',
+        grade: 'Grade 5',
+        subject: 'Mathematics Activities',
+        strand: 'Numbers and Operations',
+        subStrand: 'Place Value & Operations',
+        academicYear: '2026',
+        term: 'Term 1',
+        uploaderRole: 'admin',
+        uploaderName: 'School Office (Admin)',
+        recipientTeacherIds: ['t-elvis'],
+        isLearnerApproved: false,
+        isParentVisible: false,
+        status: 'active',
+        createdAt: now,
+        documents: [
+          {
+            id: 'doc_math_5_scheme',
+            name: 'grade5_math_term1_scheme.doc',
+            fileType: 'document',
+            size: '18 KB',
+            sizeBytes: 18432,
+            content: `LITTLE ROSES ACADEMY, NAKURU\nDEPARTMENT OF MATHEMATICS & STEM\nGRADE 5 TERM 1 SCHEME OF WORK\n\nTeacher Assigned: Mr. Elvis Kiiru\nSubject: Mathematics Activities\nGrade: Grade 5\n\nWEEK 1: WHOLE NUMBERS (PLACE VALUE UP TO 1,000,000)\n- Specific Learning Outcomes: By the end of the sub-strand, the learner should be able to identify place value of digits up to 1,000,000.\n- Learning Experiences: Learners group objects in thousands and millions; use abacus and place value charts.\n- Key Inquiry Question: How do we express large population numbers in Kenya?\n- Assessment: Written exercises, observation checklist.\n\nWEEK 2: ADDITION AND SUBTRACTION OF 6-DIGIT NUMBERS\n- Outcomes: Add and subtract large numbers with and without regrouping in real-life contexts.\n- Integration: Financial literacy, calculating school budget totals.\n\nWEEK 3: FRACTIONS & DECIMALS\n- Outcomes: Identify proper, improper and mixed fractions; convert decimals to tenths and hundredths.\n- Assessment Modes: Practical paper folding, diagnostic CAT test.`,
+            htmlContent: `<h1>LITTLE ROSES ACADEMY, NAKURU</h1><h2>Grade 5 Mathematics - Term 1 Scheme of Work</h2><p><b>Teacher:</b> Mr. Elvis Kiiru | <b>Grade:</b> Grade 5 | <b>Subject:</b> Mathematics Activities</p><hr/><h3>Week 1: Whole Numbers & Place Value up to 1,000,000</h3><ul><li><b>Outcomes:</b> Identify and write place values up to 1,000,000.</li><li><b>Resources:</b> Number charts, abacus, currency models.</li><li><b>Assessment:</b> Written exercise, observation.</li></ul><h3>Week 2: Operations on Large Numbers</h3><ul><li><b>Outcomes:</b> Add and subtract 6-digit numbers in everyday word problems.</li><li><b>Assessment:</b> Class exercise and peer assessment.</li></ul>`,
+            versions: [],
+          },
+        ],
+      },
+      {
+        id: 'pkg_elvis_math_5_revision',
+        packageName: 'Grade 5 Mathematics Practice Notes & Homework Book',
+        description: 'Comprehensive learner revision material with solved examples for Term 1.',
+        category: 'Revision Materials',
+        grade: 'Grade 5',
+        subject: 'Mathematics Activities',
+        strand: 'Numbers',
+        academicYear: '2026',
+        term: 'Term 1',
+        uploaderRole: 'teacher',
+        uploaderId: 't-elvis',
+        uploaderName: 'Mr. Elvis Kiiru',
+        recipientTeacherIds: ['t-elvis', 'all'],
+        isLearnerApproved: true,
+        isParentVisible: true,
+        status: 'active',
+        createdAt: now,
+        documents: [
+          {
+            id: 'doc_math_5_rev',
+            name: 'grade5_math_practice_notes.pdf',
+            fileType: 'pdf',
+            size: '24 KB',
+            sizeBytes: 24576,
+            content: `LITTLE ROSES ACADEMY - STUDY GUIDE\nGRADE 5 MATHEMATICS ACTIVITIES - TERM 1 REVISION\n\nTopic: Whole Numbers & Place Value\nRule: Every digit in a number has a place value. Moving left multiplies value by 10.\nExample: In 452,810, the digit 5 is in the Ten Thousands place.\n\nPractice Questions:\n1. Write 349,205 in words.\n2. What is the total value of digit 7 in 782,143?\n3. Round off 84,672 to the nearest thousand.\n\nAnswers and explanations should be written in your homework exercise book.`,
+            versions: [],
+          },
+        ],
+      },
+      {
+        id: 'pkg_elvis_eng_4_lesson_notes',
+        packageName: 'Grade 4 English Language Activities - Comprehensive Lesson Notes',
+        description: 'Parts of speech, sentence building, punctuation and vocabulary notes approved for Grade 4 learners.',
+        category: 'Lesson Notes',
+        grade: 'Grade 4',
+        subject: 'English Language Activities',
+        strand: 'Reading & Grammar',
+        academicYear: '2026',
+        term: 'Term 1',
+        uploaderRole: 'teacher',
+        uploaderId: 't-elvis',
+        uploaderName: 'Mr. Elvis Kiiru',
+        recipientTeacherIds: ['t-elvis'],
+        isLearnerApproved: true,
+        isParentVisible: true,
+        status: 'active',
+        createdAt: now,
+        documents: [
+          {
+            id: 'doc_eng_4_notes',
+            name: 'grade4_english_lesson_notes.docx',
+            fileType: 'docx',
+            size: '15 KB',
+            sizeBytes: 15360,
+            content: `LITTLE ROSES ACADEMY\nENGLISH LANGUAGE ACTIVITIES - GRADE 4\nTERM 1 LESSON NOTES\n\nTheme: Our School & Environment\n1. Nouns: Words that name people, places, animals, or things. Examples: teacher, Nakuru, desk, flower.\n2. Verbs: Action words showing what someone or something does. Examples: reads, runs, writes, listens.\n3. Punctuation Rules:\n- Always begin a sentence with a Capital Letter.\n- End telling sentences with a Full Stop (.).\n- End asking sentences with a Question Mark (?).`,
+            htmlContent: `<h1>Little Roses Academy</h1><h2>Grade 4 English Language Activities</h2><p><b>Unit 1:</b> Parts of Speech & Sentence Building</p><hr/><h3>1. Nouns</h3><p>A noun is a naming word. Examples: <i>teacher, school, desk, Nakuru, book</i>.</p><h3>2. Verbs</h3><p>Verbs are doing or action words. Examples: <i>reading, writing, jumping, planting</i>.</p><h3>3. Punctuation Rules</h3><ul><li>Begin with a <b>Capital Letter</b>.</li><li>Finish statements with a <b>Full Stop (.)</b>.</li><li>End inquiries with a <b>Question Mark (?)</b>.</li></ul>`,
+            versions: [],
+          },
+        ],
+      },
+      {
+        id: 'pkg_elvis_eng_4_cat',
+        packageName: 'Grade 4 English Mid-Term CBC Assessment (30 Marks)',
+        description: 'Approved mid-term continuous assessment test covering reading comprehension, grammar and creative writing.',
+        category: 'CATs / Assessments',
+        grade: 'Grade 4',
+        subject: 'English Language Activities',
+        strand: 'Language Use',
+        academicYear: '2026',
+        term: 'Term 1',
+        uploaderRole: 'teacher',
+        uploaderId: 't-elvis',
+        uploaderName: 'Mr. Elvis Kiiru',
+        recipientTeacherIds: ['t-elvis'],
+        isLearnerApproved: true,
+        isParentVisible: true,
+        status: 'active',
+        createdAt: now,
+        documents: [
+          {
+            id: 'doc_eng_4_cat',
+            name: 'grade4_english_midterm_cat.pdf',
+            fileType: 'pdf',
+            size: '22 KB',
+            sizeBytes: 22528,
+            content: `LITTLE ROSES ACADEMY\nPRIMARY CBC CONTINUOUS ASSESSMENT TEST (CAT 1)\nGRADE 4 - ENGLISH LANGUAGE ACTIVITIES\nTime: 1 Hour | Total: 30 Marks\n\nSection A: Comprehension (10 Marks)\nRead the passage below and answer Questions 1 to 5.\n\nSection B: Grammar & Vocabulary (10 Marks)\nChoose the correct verb in brackets to complete each sentence.\n\nSection C: Composition & Guided Writing (10 Marks)\nWrite ten sentences about "My Best Day at School".`,
+            versions: [],
+          },
+        ],
+      },
+      {
+        id: 'pkg_sci_4_plants',
+        packageName: 'Grade 4 Science and Technology - Plant Parts and Functions',
+        description: 'Visual study notes on roots, stems, leaves, flowers and how plants feed.',
+        category: 'Class Notes',
+        grade: 'Grade 4',
+        subject: 'Science and Technology',
+        strand: 'Living Things',
+        academicYear: '2026',
+        term: 'Term 1',
+        uploaderRole: 'admin',
+        uploaderName: 'School Office (Admin)',
+        recipientTeacherIds: ['t-elvis', 'all'],
+        isLearnerApproved: true,
+        isParentVisible: true,
+        status: 'active',
+        createdAt: now,
+        documents: [
+          {
+            id: 'doc_sci_4_plants',
+            name: 'grade4_science_plants_notes.doc',
+            fileType: 'document',
+            size: '14 KB',
+            sizeBytes: 14336,
+            content: `LITTLE ROSES ACADEMY\nSCIENCE & TECHNOLOGY - GRADE 4 NOTES\nTopic: Living Things - Flowering Plants\n\n1. Roots: Hold the plant firmly in the soil; absorb water and mineral salts.\n2. Stem: Transports water to the leaves; holds branches and flowers up to sunlight.\n3. Leaves: Make food for the plant using sunlight, water, and air (photosynthesis).\n4. Flowers: Produce seeds and fruit for reproduction.`,
+            versions: [],
+          },
+        ],
+      },
+      {
+        id: 'pkg_grade2_reader',
+        packageName: 'Grade 2 CBC Storybook: The Clever Tortoise and the Proud Hare',
+        description: 'Lower primary approved storybook reader with comprehension questions for Grade 2 learners and parents.',
+        category: 'Reading Materials',
+        grade: 'Grade 2',
+        subject: 'English Language Activities',
+        strand: 'Extensive Reading',
+        academicYear: '2026',
+        term: 'Term 1',
+        uploaderRole: 'admin',
+        uploaderName: 'School Office (Admin)',
+        recipientTeacherIds: ['all'],
+        isLearnerApproved: true,
+        isParentVisible: true,
+        status: 'active',
+        createdAt: now,
+        documents: [
+          {
+            id: 'doc_grade2_story',
+            name: 'clever_tortoise_storybook.doc',
+            fileType: 'document',
+            size: '12 KB',
+            sizeBytes: 12288,
+            content: `LITTLE ROSES ACADEMY CBC STORYBOOK\nTHE CLEVER TORTOISE AND THE PROUD HARE\nGrade: Grade 2 Reader | English Language Activities\n\nOnce upon a time in the Great Rift Valley near Lake Nakuru, there lived a speedy Hare and a steady Tortoise.\nThe Hare always laughed at the Tortoise because he walked so slowly.\n"Let us have a race to the big Acacia tree!" said the Tortoise.\nThe Hare laughed and agreed. When the race started, Hare ran very fast. Seeing he was ahead, Hare sat down to sleep under a tree.\nThe Tortoise walked step by step, never stopping, until he touched the Acacia tree first!\n\nMoral: Slow and steady wins the race. Persistence and hard work bring success.`,
+            versions: [],
+          },
+        ],
+      },
+      {
+        id: 'pkg_grade2_geometry',
+        packageName: 'Grade 2 Mathematics - Shapes and Measurement Practice Sheet',
+        description: 'Interactive geometry activity sheet identifying 2D shapes and patterns.',
+        category: 'Assignments',
+        grade: 'Grade 2',
+        subject: 'Mathematics Activities',
+        strand: 'Geometry',
+        academicYear: '2026',
+        term: 'Term 1',
+        uploaderRole: 'admin',
+        uploaderName: 'School Office (Admin)',
+        recipientTeacherIds: ['all'],
+        isLearnerApproved: true,
+        isParentVisible: true,
+        status: 'active',
+        createdAt: now,
+        documents: [
+          {
+            id: 'doc_grade2_geom',
+            name: 'grade2_math_shapes_practice.pdf',
+            fileType: 'pdf',
+            size: '16 KB',
+            sizeBytes: 16384,
+            content: `LITTLE ROSES ACADEMY\nGRADE 2 MATHEMATICS - SHAPES & PATTERNS\n1. Name the four basic 2D shapes: Circle, Triangle, Square, Rectangle.\n2. Count the sides of a triangle (3 sides).\n3. Draw a pattern with alternating squares and circles.\n4. Measure the length of your pencil using a ruler (in cm).`,
+            versions: [],
+          },
+        ],
+      },
+      {
+        id: 'pkg_grade3_kiswahili',
+        packageName: 'Grade 3 Kiswahili - Kusoma, Ufahamu na Mazingira Yetu',
+        description: 'Shughuli za Kiswahili: Kifungu cha kusoma kuhusu usafi wa mazingira shuleni na majibu ya maswali.',
+        category: 'Class Notes',
+        grade: 'Grade 3',
+        subject: 'Kiswahili Language Activities',
+        strand: 'Kusoma na Kuelewa',
+        academicYear: '2026',
+        term: 'Term 1',
+        uploaderRole: 'admin',
+        uploaderName: 'School Office (Admin)',
+        recipientTeacherIds: ['all'],
+        isLearnerApproved: true,
+        isParentVisible: true,
+        status: 'active',
+        createdAt: now,
+        documents: [
+          {
+            id: 'doc_kiswahili_3',
+            name: 'grade3_kiswahili_ufahamu.docx',
+            fileType: 'docx',
+            size: '14 KB',
+            sizeBytes: 14336,
+            content: `AKADEMIA YA LITTLE ROSES, NAKURU\nSHUGHULI ZA KISWAHILI - GREDI YA 3\n\nKusoma kwa Ufahamu: Mazingira Yetu Shuleni\nSiku ya Ijumaa, wanafunzi wa Gredi ya Tatu walifanya usafi shuleni Little Roses.\nWalifagia darasa, wakakusanya taka na kumwagilia maua maji.\nBwana Elvis aliwapongeza kwa bidii yao na kuwaeleza umuhimu wa kutunza mazingira safi.\n\nMaswali:\n1. Wanafunzi walifanya usafi siku gani?\n2. Nani aliwapongeza wanafunzi kwa bidii yao?\n3. Taja faida mbili za kuweka shule safi.`,
+            versions: [],
+          },
+        ],
+      },
+      {
+        id: 'pkg_grade6_agriculture',
+        packageName: 'Grade 6 Agriculture & Nutrition - Soil Conservation & Nursery Beds',
+        description: 'Upper primary CBC project guide on organic composting, nursery beds and crop management.',
+        category: 'CBC Curriculum',
+        grade: 'Grade 6',
+        subject: 'Agriculture and Nutrition',
+        strand: 'Soil and Crop Production',
+        academicYear: '2026',
+        term: 'Term 1',
+        uploaderRole: 'admin',
+        uploaderName: 'School Office (Admin)',
+        recipientTeacherIds: ['all'],
+        isLearnerApproved: true,
+        isParentVisible: true,
+        status: 'active',
+        createdAt: now,
+        documents: [
+          {
+            id: 'doc_agri_6',
+            name: 'grade6_agriculture_curriculum_guide.pdf',
+            fileType: 'pdf',
+            size: '26 KB',
+            sizeBytes: 26624,
+            content: `LITTLE ROSES ACADEMY\nJUNIOR CBC PROJECT GUIDE - GRADE 6\nAGRICULTURE AND NUTRITION\n\nStrand: Conservation of Agricultural Environment\nSub-Strand: Soil Conservation Practices\n1. Mulching: Covering soil with dry grass or leaves to retain moisture and suppress weeds.\n2. Contour Farming: Ploughing across slopes to reduce water runoff.\n3. Organic Composting: Preparing pit and heap compost using dry organic matter, green matter, topsoil and wood ash.\n\nPractical Learner Project: Establish a container garden using recycled plastic containers in the school yard.`,
+            versions: [],
+          },
+        ],
+      },
+    ];
+  }
+
+  public getResourcePackages(teacherIdOrFilter?: string | ResourcePackageFilter): ResourcePackageRecord[] {
     try {
       const saved = localStorage.getItem(KEYS.RESOURCE_PACKAGES);
-      let list: ResourcePackageRecord[] = saved ? JSON.parse(saved) : [];
+      let list: ResourcePackageRecord[] = [];
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            list = parsed;
+          }
+        } catch {}
+      }
+
+      // If empty, auto-seed with official curriculum packages
+      if (list.length === 0) {
+        list = this.generateInitialResourcePackages();
+        this.persistResourcePackages(list);
+      }
 
       // Hydrate missing fileData from memory cache if available
       list.forEach((pkg) => {
@@ -3346,15 +3660,109 @@ class SchoolDataLayer {
         });
       });
 
-      if (teacherId) {
-        list = list.filter((p) => {
+      if (!teacherIdOrFilter) return list;
+
+      // Backward compatible string teacherId filter
+      if (typeof teacherIdOrFilter === 'string') {
+        const teacherId = teacherIdOrFilter;
+        return list.filter((p) => {
           if (!p.recipientTeacherIds || !Array.isArray(p.recipientTeacherIds) || p.recipientTeacherIds.length === 0) {
             return true;
           }
           return p.recipientTeacherIds.includes(teacherId) || p.recipientTeacherIds.includes('all');
         });
       }
-      return list;
+
+      // Advanced query filter object for Admin, Teacher, Learner, Parent portals
+      const filter = teacherIdOrFilter;
+      return list.filter((p) => {
+        // Exclude archived unless admin explicitly requests it
+        if (p.isArchived && filter.portalRole !== 'admin') return false;
+
+        // Role-based permissions & filtering:
+        if (filter.portalRole === 'teacher' && filter.teacherId) {
+          const assigned =
+            p.recipientTeacherIds?.includes(filter.teacherId) ||
+            p.recipientTeacherIds?.includes('all') ||
+            p.uploaderId === filter.teacherId;
+          if (!assigned) return false;
+        }
+
+        if (filter.portalRole === 'learner') {
+          // Learner only sees approved materials
+          if (!p.isLearnerApproved) return false;
+          // Must match learner's grade
+          if (filter.grade && p.grade.toLowerCase() !== filter.grade.toLowerCase() && p.grade.toLowerCase() !== 'all') {
+            return false;
+          }
+        }
+
+        if (filter.portalRole === 'parent') {
+          // Parent only sees approved learning materials or parent-visible files
+          if (!p.isLearnerApproved && !p.isParentVisible) return false;
+          // Must match current selected child's grade
+          if (filter.grade && p.grade.toLowerCase() !== filter.grade.toLowerCase() && p.grade.toLowerCase() !== 'all') {
+            return false;
+          }
+        }
+
+        // Field filters
+        if (
+          filter.grade &&
+          filter.portalRole !== 'learner' &&
+          filter.portalRole !== 'parent' &&
+          p.grade.toLowerCase() !== filter.grade.toLowerCase() &&
+          p.grade.toLowerCase() !== 'all'
+        ) {
+          return false;
+        }
+
+        if (
+          filter.subject &&
+          p.subject.toLowerCase() !== filter.subject.toLowerCase() &&
+          p.subject.toLowerCase() !== 'all' &&
+          p.subject.toLowerCase() !== 'general'
+        ) {
+          return false;
+        }
+
+        if (
+          filter.term &&
+          p.term.toLowerCase() !== filter.term.toLowerCase() &&
+          filter.term !== 'All Terms'
+        ) {
+          return false;
+        }
+
+        if (filter.category && p.category.toLowerCase() !== filter.category.toLowerCase()) {
+          return false;
+        }
+
+        if (filter.onlyLearnerApproved && !p.isLearnerApproved) {
+          return false;
+        }
+
+        // Full-text search across title, description, strand, subject, and document content!
+        if (filter.searchQuery && filter.searchQuery.trim()) {
+          const q = filter.searchQuery.toLowerCase().trim();
+          const matchPkg =
+            p.packageName.toLowerCase().includes(q) ||
+            (p.description && p.description.toLowerCase().includes(q)) ||
+            p.subject.toLowerCase().includes(q) ||
+            (p.strand && p.strand.toLowerCase().includes(q)) ||
+            p.category.toLowerCase().includes(q);
+
+          const matchDocs = p.documents?.some(
+            (d) =>
+              d.name.toLowerCase().includes(q) ||
+              (d.content && d.content.toLowerCase().includes(q))
+          );
+
+          if (!matchPkg && !matchDocs) return false;
+        }
+
+        return true;
+      });
     } catch {
       return [];
     }

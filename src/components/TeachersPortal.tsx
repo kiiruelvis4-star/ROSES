@@ -50,11 +50,16 @@ import {
   ClipboardCheck,
   Bell,
   FolderOpen,
-  Menu
+  Menu,
+  Layers,
+  Home,
+  SlidersHorizontal
 } from 'lucide-react';
 import { CircularBadgeLogo } from './CircularBadgeLogo';
 import { TeacherResourcesStudio } from './TeacherResourcesStudio.tsx';
 import { PortalDrawer } from './PortalDrawer.tsx';
+import { PortalSwitcherBadge } from './PortalSwitcherBadge.tsx';
+import { downloadCBCReportCard, downloadStorybook } from '../utils/downloadPDF.ts';
 import {
   TeacherRecord,
   getRegisteredTeachers,
@@ -73,6 +78,7 @@ import {
 export interface TeachersPortalProps {
   mode?: 'phone' | 'tablet' | 'full';
   onSwitchToAdmin?: () => void;
+  onSwitchPortal?: (portal: 'admin' | 'teachers' | 'parents' | 'learners') => void;
   onExit?: () => void;
 }
 
@@ -865,6 +871,7 @@ export const INITIAL_PARENT_THREADS: ParentThread[] = [
 export function TeachersPortal({
   mode = 'phone',
   onSwitchToAdmin,
+  onSwitchPortal,
   onExit
 }: TeachersPortalProps) {
   // ---------------------------------------------------------------------------
@@ -1728,17 +1735,17 @@ export function TeachersPortal({
             </button>
           )}
 
-          {/* Quick Leadership Switcher for Elvis & Kelvin */}
-          {currentTeacher.isDualAdmin && (
-            <button
-              onClick={() => onSwitchToAdmin?.()}
-              className="px-2.5 py-1.5 rounded-xl bg-amber-400/10 hover:bg-amber-400/20 text-amber-300 border border-amber-400/30 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95"
-              title="Switch directly to School Office Administration"
-            >
-              <Building2 className="w-3.5 h-3.5 text-amber-400" />
-              <span className="hidden sm:inline">School Office</span>
-            </button>
-          )}
+          {/* Connected Portals Switcher */}
+          <PortalSwitcherBadge
+            currentPortal="teachers"
+            onSwitchPortal={(portal) => {
+              if (onSwitchPortal) {
+                onSwitchPortal(portal);
+              } else if (portal === 'admin' && onSwitchToAdmin) {
+                onSwitchToAdmin();
+              }
+            }}
+          />
 
           {/* Teacher Profile / System Controls Trigger (Avatar + Status Dot) */}
           <button
@@ -3016,34 +3023,35 @@ export function TeachersPortal({
       </main>
 
       {/* =======================================================================
-          3. DEDICATED BOTTOM NAVIGATION (WHATSAPP-STYLE TAB BAR)
+          3. DEDICATED BOTTOM NAVIGATION (SCREENSHOTS ALIGNED TAB BAR)
           ======================================================================= */}
       <nav
-        className="absolute bottom-0 inset-x-0 z-40 px-2 py-1.5 border-t border-slate-800/80 shadow-[0_-5px_20px_rgba(0,0,0,0.7)] flex items-center justify-around"
-        style={{ backgroundColor: '#0A192F' }}
+        className="absolute bottom-0 inset-x-0 z-40 px-2 sm:px-4 py-2 border-t border-blue-950/80 shadow-[0_-8px_24px_rgba(0,0,0,0.8)] flex items-center justify-around bg-gradient-to-t from-[#060c1d] to-[#0a1638]"
       >
         {[
-          { id: 'timetable', label: 'Timetable', icon: Calendar },
+          { id: 'classes', label: 'Home', icon: Home },
           { id: 'classes', label: 'My Classes', icon: Users },
+          { id: 'timetable', label: 'Timetable', icon: Calendar },
           { id: 'resources', label: 'Resources', icon: FolderOpen, badge: teacherResourcesCount > 0 ? teacherResourcesCount : undefined },
-          { id: 'assessments', label: 'Assessments', icon: ClipboardList },
-          { id: 'messages', label: 'Messages', icon: MessageSquare, badge: 2 }
-        ].map((tab) => {
-          const isActive = activeTab === tab.id;
+          { id: 'assessments', label: 'Assessment', icon: ClipboardList },
+        ].map((tab, idx) => {
+          // Prevent key conflict for the two classes mappings
+          const key = `${tab.id}_${idx}`;
+          const isActive = activeTab === tab.id && (tab.label !== 'Home' || activeTab === 'classes');
           const Icon = tab.icon;
 
           return (
             <button
-              key={tab.id}
+              key={key}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-2xl transition-all cursor-pointer relative ${
+              className={`flex flex-col items-center justify-center py-1.5 px-2.5 sm:px-3 rounded-2xl transition-all cursor-pointer relative ${
                 isActive
-                  ? 'bg-emerald-600 text-white font-black shadow-lg scale-105'
+                  ? 'bg-blue-600 text-white font-black shadow-[0_0_16px_rgba(37,99,235,0.55)] scale-105'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
               <div className="relative">
-                <Icon className={`w-5 h-5 ${isActive ? 'stroke-[2.5]' : 'stroke-[1.8]'}`} />
+                <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${isActive ? 'stroke-[2.5]' : 'stroke-[1.8]'}`} />
                 {tab.badge && !isActive && (
                   <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full animate-ping" />
                 )}
@@ -3052,6 +3060,15 @@ export function TeachersPortal({
             </button>
           );
         })}
+
+        {/* 6th Button: More (Opens Teacher Drawer with excess options) */}
+        <button
+          onClick={() => setShowTeacherMenu(true)}
+          className="flex flex-col items-center justify-center py-1.5 px-2.5 sm:px-3 rounded-2xl text-slate-400 hover:text-amber-300 transition cursor-pointer"
+        >
+          <SlidersHorizontal className="w-4 h-4 sm:w-5 sm:h-5" />
+          <span className="text-[10px] font-bold mt-0.5 tracking-tight">More</span>
+        </button>
       </nav>
 
       {/* =======================================================================
@@ -3184,10 +3201,15 @@ export function TeachersPortal({
 
             <button
               onClick={() => {
-                showToast(`Assessment card downloaded for ${inspectingPupil.name}! 📄`);
+                downloadCBCReportCard(inspectingPupil.name, inspectingPupil.upi, inspectingPupil.grade || assessGrade || 'Grade 4', {
+                  term: 'Term 1',
+                  standing: 'Meeting Expectations (ME)',
+                  remark: inspectingPupil.focusZoneNotes || 'Consistent effort and positive CBC participation.',
+                });
+                showToast(`Official assessment card downloaded for ${inspectingPupil.name}! 📄`);
                 setInspectingPupil(null);
               }}
-              className="w-full mt-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+              className="w-full mt-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
             >
               <Download className="w-4 h-4" />
               <span>Download Official Report Card</span>
@@ -4173,6 +4195,20 @@ export function TeachersPortal({
 
                 <button
                   type="button"
+                  onClick={() => {
+                    const fullText = `${inspectingStorybook.title.toUpperCase()}\n${inspectingStorybook.language} Activities • ${inspectingStorybook.grade || 'CBC Primary'}\nCurriculum Strand: ${inspectingStorybook.strandMapping}\n\nSTORY:\n"${inspectingStorybook.excerpt}"\n\nCOMPREHENSION QUESTIONS:\n` + inspectingStorybook.questions.map((q, idx) => `Q${idx + 1}: ${q.question}\nAns: ${q.answer}`).join('\n\n');
+                    downloadStorybook(inspectingStorybook.title, fullText);
+                    showToast(`Storybook "${inspectingStorybook.title}" downloaded! 📚`);
+                  }}
+                  className="px-3.5 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                  title="Download offline reader copy"
+                >
+                  <Download className="w-3.5 h-3.5 text-blue-400" />
+                  <span className="hidden sm:inline">Download</span>
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => setInspectingStorybook(null)}
                   className="px-4 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs cursor-pointer"
                 >
@@ -4193,6 +4229,8 @@ export function TeachersPortal({
         portalSubtitle="Staff Portal • CBC Standard"
         userName={currentTeacher.name}
         userBadge={currentTeacher.assignedGrades?.join(', ') || 'Class Teacher'}
+        currentPortal="teachers"
+        onSwitchPortal={onSwitchPortal}
         navItems={[
           {
             id: 'timetable',

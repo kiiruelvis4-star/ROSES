@@ -106,6 +106,7 @@ import {
   LearnerModal,
   ParentModal,
 } from './UserEditModals.tsx';
+import { PortalSwitcherBadge } from './PortalSwitcherBadge.tsx';
 import {
   dataLayer,
   subscribeToDataLayer,
@@ -250,9 +251,14 @@ interface AdminPortalProps {
   mode?: 'phone' | 'tablet' | 'full';
   onBackToPortals: () => void;
   onSwitchToTeachers?: () => void;
+  onSwitchPortal?: (portal: 'admin' | 'teachers' | 'parents' | 'learners') => void;
 }
 
-export function AdminPortal({ onBackToPortals }: AdminPortalProps) {
+export function AdminPortal({
+  onBackToPortals,
+  onSwitchToTeachers,
+  onSwitchPortal,
+}: AdminPortalProps) {
   // Navigation State
   const [activeTab, setActiveTab] = useState<AdminTab>('home');
   const [navHistory, setNavHistory] = useState<AdminTab[]>([]);
@@ -387,36 +393,43 @@ export function AdminPortal({ onBackToPortals }: AdminPortalProps) {
     if (!deleteConfirmTarget) return;
     const { type, id, name } = deleteConfirmTarget;
 
-    if (type === 'teacher') {
-      dataLayer.deleteTeacher(id);
-      setSelectedTeacherId(null);
-      setTeachers(dataLayer.getTeachers());
+    try {
+      if (type === 'teacher') {
+        dataLayer.deleteTeacher(id);
+        setSelectedTeacherId(null);
+        setTeachers(dataLayer.getTeachers());
+        setUploadStatusBanner({
+          message: `Deleted teacher "${name}"`,
+          type: 'success',
+        });
+      } else if (type === 'pupil') {
+        dataLayer.deletePupil(id);
+        setSelectedPupilId(null);
+        setPupils(dataLayer.getPupils());
+        setUploadStatusBanner({
+          message: `Deleted learner "${name}"`,
+          type: 'success',
+        });
+      } else if (type === 'parent') {
+        dataLayer.deleteParent(id);
+        setSelectedParentPhone(null);
+        setParents(dataLayer.getParents());
+        setUploadStatusBanner({
+          message: `Deleted family account for "${name}"`,
+          type: 'success',
+        });
+      } else if (type === 'resource') {
+        dataLayer.deleteResourcePackage(id);
+        setResourcesRevision((r) => r + 1);
+        setUploadStatusBanner({
+          message: `Deleted resource "${name}"`,
+          type: 'success',
+        });
+      }
+    } catch (err: any) {
       setUploadStatusBanner({
-        message: `Deleted teacher "${name}"`,
-        type: 'success',
-      });
-    } else if (type === 'pupil') {
-      dataLayer.deletePupil(id);
-      setSelectedPupilId(null);
-      setPupils(dataLayer.getPupils());
-      setUploadStatusBanner({
-        message: `Deleted learner "${name}"`,
-        type: 'success',
-      });
-    } else if (type === 'parent') {
-      dataLayer.deleteParent(id);
-      setSelectedParentPhone(null);
-      setParents(dataLayer.getParents());
-      setUploadStatusBanner({
-        message: `Deleted family account for "${name}"`,
-        type: 'success',
-      });
-    } else if (type === 'resource') {
-      dataLayer.deleteResourcePackage(id);
-      setResourcesRevision((r) => r + 1);
-      setUploadStatusBanner({
-        message: `Deleted resource "${name}"`,
-        type: 'success',
+        message: `Deletion failed: ${err?.message || 'Error occurred'}`,
+        type: 'error',
       });
     }
     setTimeout(() => setUploadStatusBanner(null), 3500);
@@ -2267,6 +2280,55 @@ export function AdminPortal({ onBackToPortals }: AdminPortalProps) {
               </button>
             );
           })}
+
+          {/* Connected School Portals Quick Links */}
+          <div className="pt-2 mt-2 border-t border-slate-800/80 px-1">
+            <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider block mb-1.5 px-2">
+              Connected Portals
+            </span>
+            <div className="space-y-1">
+              <button
+                type="button"
+                onClick={() => {
+                  if (onSwitchPortal) onSwitchPortal('teachers');
+                  else if (onSwitchToTeachers) onSwitchToTeachers();
+                }}
+                className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/80 transition text-left cursor-pointer"
+              >
+                <div className="flex items-center gap-2 truncate">
+                  <span>👨‍🏫</span>
+                  <span className="truncate">Teachers Studio</span>
+                </div>
+                <ChevronRight className="w-3.5 h-3.5 opacity-40 shrink-0" />
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (onSwitchPortal) onSwitchPortal('parents');
+                }}
+                className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/80 transition text-left cursor-pointer"
+              >
+                <div className="flex items-center gap-2 truncate">
+                  <span>👨‍👩‍👧</span>
+                  <span className="truncate">Parents Portal</span>
+                </div>
+                <ChevronRight className="w-3.5 h-3.5 opacity-40 shrink-0" />
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (onSwitchPortal) onSwitchPortal('learners');
+                }}
+                className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/80 transition text-left cursor-pointer"
+              >
+                <div className="flex items-center gap-2 truncate">
+                  <span>🎒</span>
+                  <span className="truncate">Learners Zone</span>
+                </div>
+                <ChevronRight className="w-3.5 h-3.5 opacity-40 shrink-0" />
+              </button>
+            </div>
+          </div>
         </nav>
 
         {/* Sidebar Footer: Real Academic Year & Term info */}
@@ -2354,6 +2416,58 @@ export function AdminPortal({ onBackToPortals }: AdminPortalProps) {
                   </button>
                 );
               })}
+
+              {/* Mobile Drawer Connected Portals */}
+              <div className="pt-2 mt-2 border-t border-slate-800/80 px-1">
+                <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider block mb-1.5 px-2">
+                  Connected Portals
+                </span>
+                <div className="space-y-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsSidebarOpen(false);
+                      if (onSwitchPortal) onSwitchPortal('teachers');
+                      else if (onSwitchToTeachers) onSwitchToTeachers();
+                    }}
+                    className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/80 transition text-left cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span>👨‍🏫</span>
+                      <span>Teachers Studio</span>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 opacity-40 shrink-0" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsSidebarOpen(false);
+                      if (onSwitchPortal) onSwitchPortal('parents');
+                    }}
+                    className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/80 transition text-left cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span>👨‍👩‍👧</span>
+                      <span>Parents Portal</span>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 opacity-40 shrink-0" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsSidebarOpen(false);
+                      if (onSwitchPortal) onSwitchPortal('learners');
+                    }}
+                    className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/80 transition text-left cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span>🎒</span>
+                      <span>Learners Zone</span>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 opacity-40 shrink-0" />
+                  </button>
+                </div>
+              </div>
             </nav>
 
             {/* Drawer Footer */}
@@ -2527,6 +2641,18 @@ export function AdminPortal({ onBackToPortals }: AdminPortalProps) {
                 className="w-full bg-transparent border-0 text-white placeholder-slate-400 focus:outline-none text-xs"
               />
             </div>
+
+            {/* Connected Portals Switcher */}
+            <PortalSwitcherBadge
+              currentPortal="admin"
+              onSwitchPortal={(portal) => {
+                if (onSwitchPortal) {
+                  onSwitchPortal(portal);
+                } else if (portal === 'teachers' && onSwitchToTeachers) {
+                  onSwitchToTeachers();
+                }
+              }}
+            />
 
             {/* Theme Control (Preserves Phase 0 Light / Dark / System) */}
             <div className="flex items-center bg-slate-900 border border-slate-700/80 rounded-xl p-0.5">
@@ -4294,22 +4420,6 @@ export function AdminPortal({ onBackToPortals }: AdminPortalProps) {
                                 >
                                   <Edit className="w-3.5 h-3.5" />
                                 </button>
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setDeleteConfirmTarget({
-                                      type: 'teacher',
-                                      id: t.id,
-                                      name: t.name,
-                                      subtitle: `${t.phone || ''} • ${t.assignedGrades?.join(', ') || ''}`,
-                                    });
-                                  }}
-                                  className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-600 text-slate-400 hover:text-white transition cursor-pointer"
-                                  title="Delete Teacher"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
                                 <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-blue-400 group-hover:translate-x-0.5 transition-transform" />
                               </div>
                             </div>
@@ -4692,22 +4802,6 @@ export function AdminPortal({ onBackToPortals }: AdminPortalProps) {
                                   >
                                     <Edit className="w-3.5 h-3.5" />
                                   </button>
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setDeleteConfirmTarget({
-                                       type: 'pupil',
-                                       id: p.id,
-                                       name: p.name,
-                                       subtitle: `${p.grade} • UPI: ${p.upi}`,
-                                      });
-                                    }}
-                                    className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-600 text-slate-400 hover:text-white transition cursor-pointer"
-                                    title="Delete Learner"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
                                   <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-emerald-400 group-hover:translate-x-0.5 transition-transform" />
                                 </div>
                               </div>
@@ -5019,23 +5113,6 @@ export function AdminPortal({ onBackToPortals }: AdminPortalProps) {
                                     >
                                       <Edit className="w-3 h-3" />
                                       <span>Edit</span>
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setDeleteConfirmTarget({
-                                          type: 'parent',
-                                          id: p.id || p.parentPhone || p.phone,
-                                          name: p.parentName || p.name,
-                                          subtitle: `Phone: ${p.parentPhone || p.phone}`,
-                                        });
-                                      }}
-                                      className="p-1 rounded-md bg-slate-800 hover:bg-rose-600 text-slate-400 hover:text-white transition flex items-center gap-1 cursor-pointer"
-                                      title="Delete Family"
-                                    >
-                                      <Trash2 className="w-3 h-3" />
-                                      <span>Delete</span>
                                     </button>
                                   </div>
                                   <div className="flex items-center gap-1">
@@ -6185,14 +6262,14 @@ export function AdminPortal({ onBackToPortals }: AdminPortalProps) {
                                               <span>Offline AI Assistant</span>
                                             </button>
 
-                                            {/* Real Upload Button */}
+                                            {/* Unified Upload Document Button */}
                                             <button
                                               onClick={() => locationFileInputRef.current?.click()}
-                                              className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-bold text-xs transition cursor-pointer flex items-center gap-1.5 shadow-sm"
-                                              title="Upload real document, PDF, spreadsheet, image, or video"
+                                              className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition cursor-pointer flex items-center gap-1.5 shadow-md"
+                                              title="Upload real document, PDF, spreadsheet, image, or video with automatic text extraction"
                                             >
-                                              <FileUp className="w-3.5 h-3.5 text-emerald-400" />
-                                              <span>Upload File</span>
+                                              <FileUp className="w-3.5 h-3.5" />
+                                              <span>Upload Document</span>
                                             </button>
 
                                             {/* Create Document Workspace Buttons */}
@@ -6221,21 +6298,6 @@ export function AdminPortal({ onBackToPortals }: AdminPortalProps) {
                                             >
                                               <Edit3 className="w-3.5 h-3.5 text-amber-400" />
                                               <span>+ Note</span>
-                                            </button>
-
-                                            <button
-                                              onClick={() => {
-                                                setNewResourceTitle('');
-                                                setNewResourceStrand('');
-                                                setNewResourceNotes('');
-                                                setNewResourceFileName('');
-                                                setResourceFormError('');
-                                                setIsAddingResource(true);
-                                              }}
-                                              className="px-3.5 py-2 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs hover:bg-amber-400 transition cursor-pointer flex items-center gap-1.5 shadow-md"
-                                            >
-                                              <Plus className="w-3.5 h-3.5" />
-                                              <span>Add Resource</span>
                                             </button>
 
                                             <button
@@ -7547,19 +7609,19 @@ export function AdminPortal({ onBackToPortals }: AdminPortalProps) {
         </main>
 
         {/* =======================================================================
-            5. ADMIN PHONE BOTTOM NAVIGATION (EXACT 5 BUTTONS FROM SPEC)
-            Home • Users • Curriculum • Calendar • More
+            5. ADMIN PHONE BOTTOM NAVIGATION (EXACT 5 BUTTONS FROM SCREENSHOTS)
+            Home • Teachers • Pupils • Families • More
             ======================================================================= */}
         <nav
           aria-label="Phone Bottom Navigation"
-          className="md:hidden fixed bottom-0 inset-x-0 z-40 px-2 py-1.5 border-t border-slate-800/90 shadow-[0_-5px_20px_rgba(0,0,0,0.8)] flex items-center justify-around bg-[#080E24]"
+          className="md:hidden fixed bottom-0 inset-x-0 z-40 px-2 sm:px-4 py-2 border-t border-blue-950/80 shadow-[0_-8px_24px_rgba(0,0,0,0.8)] flex items-center justify-around bg-gradient-to-t from-[#060c1d] to-[#0a1638]"
         >
           {/* 1. Home */}
           <button
             onClick={() => handleNavigate('home')}
-            className={`flex flex-col items-center justify-center py-1 px-3 rounded-2xl transition-all cursor-pointer ${
+            className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-2xl transition-all cursor-pointer ${
               activeTab === 'home'
-                ? 'bg-blue-600 text-white font-black shadow-md'
+                ? 'bg-blue-600 text-white font-black shadow-[0_0_16px_rgba(37,99,235,0.5)] scale-105'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
@@ -7567,49 +7629,49 @@ export function AdminPortal({ onBackToPortals }: AdminPortalProps) {
             <span className="text-[10px] font-bold mt-0.5">Home</span>
           </button>
 
-          {/* 2. Users (Opens Teachers, Learners, Families Sheet) */}
+          {/* 2. Teachers */}
           <button
-            onClick={() => setShowUsersSheet(true)}
-            className={`flex flex-col items-center justify-center py-1 px-3 rounded-2xl transition-all cursor-pointer ${
-              activeTab === 'teachers' || activeTab === 'learners' || activeTab === 'families'
-                ? 'bg-blue-600 text-white font-black shadow-md'
+            onClick={() => handleNavigate('teachers')}
+            className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-2xl transition-all cursor-pointer ${
+              activeTab === 'teachers'
+                ? 'bg-blue-600 text-white font-black shadow-[0_0_16px_rgba(37,99,235,0.5)] scale-105'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
             <Users className="w-4 h-4" />
-            <span className="text-[10px] font-bold mt-0.5">Users</span>
+            <span className="text-[10px] font-bold mt-0.5">Teachers</span>
           </button>
 
-          {/* 3. Curriculum */}
+          {/* 3. Pupils */}
           <button
-            onClick={() => handleNavigate('curriculum')}
-            className={`flex flex-col items-center justify-center py-1 px-3 rounded-2xl transition-all cursor-pointer ${
-              activeTab === 'curriculum'
-                ? 'bg-blue-600 text-white font-black shadow-md'
+            onClick={() => handleNavigate('learners')}
+            className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-2xl transition-all cursor-pointer ${
+              activeTab === 'learners'
+                ? 'bg-blue-600 text-white font-black shadow-[0_0_16px_rgba(37,99,235,0.5)] scale-105'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            <BookOpen className="w-4 h-4" />
-            <span className="text-[10px] font-bold mt-0.5">Curriculum</span>
+            <GraduationCap className="w-4 h-4" />
+            <span className="text-[10px] font-bold mt-0.5">Pupils</span>
           </button>
 
-          {/* 4. Calendar */}
+          {/* 4. Families */}
           <button
-            onClick={() => handleNavigate('calendar')}
-            className={`flex flex-col items-center justify-center py-1 px-3 rounded-2xl transition-all cursor-pointer ${
-              activeTab === 'calendar'
-                ? 'bg-blue-600 text-white font-black shadow-md'
+            onClick={() => handleNavigate('families')}
+            className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-2xl transition-all cursor-pointer ${
+              activeTab === 'families'
+                ? 'bg-blue-600 text-white font-black shadow-[0_0_16px_rgba(37,99,235,0.5)] scale-105'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            <Calendar className="w-4 h-4" />
-            <span className="text-[10px] font-bold mt-0.5">Calendar</span>
+            <Users className="w-4 h-4" />
+            <span className="text-[10px] font-bold mt-0.5">Families</span>
           </button>
 
           {/* 5. More (Opens 19-item slide-over drawer) */}
           <button
             onClick={() => setIsSidebarOpen(true)}
-            className="flex flex-col items-center justify-center py-1 px-3 rounded-2xl text-slate-400 hover:text-amber-300 transition cursor-pointer"
+            className="flex flex-col items-center justify-center py-1.5 px-3 rounded-2xl text-slate-400 hover:text-amber-300 transition cursor-pointer"
           >
             <SlidersHorizontal className="w-4 h-4" />
             <span className="text-[10px] font-bold mt-0.5">More</span>
