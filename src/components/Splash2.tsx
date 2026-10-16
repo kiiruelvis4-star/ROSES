@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Logo } from './Logo.tsx';
+import { dataLayer } from '../services/dataLayer.ts';
 
 interface Splash2Props {
   mode?: 'phone' | 'tablet' | 'full';
@@ -8,6 +9,10 @@ interface Splash2Props {
 
 export function Splash2({ onComplete }: Splash2Props) {
   const [progress, setProgress] = useState(0);
+  const profile = dataLayer.getSchoolProfile();
+  const [imgSrc, setImgSrc] = useState<string>(
+    profile.splash2ImageUrl || '/src/assets/images/splash2_learner_desk_1791992488500.jpg'
+  );
 
   useEffect(() => {
     // Smooth progress increment up to 100%
@@ -39,15 +44,16 @@ export function Splash2({ onComplete }: Splash2Props) {
       className="relative w-full h-full flex-1 flex flex-col items-center justify-between p-6 sm:p-8 bg-[#070D1E] text-white select-none cursor-pointer overflow-hidden"
       aria-label="Little Roses Academy Readiness. Tap to skip to portal gate."
     >
-      {/* Background: Learner studying at desk with laptop & books */}
+      {/* Background: Learner studying at desk with laptop & books or custom splash 2 image */}
       <img
-        src="/src/assets/images/splash2_learner_desk_1791992488500.jpg"
+        src={imgSrc}
         alt="Little Roses Academy Learner at desk studying"
-        className="absolute inset-0 w-full h-full object-cover opacity-35 scale-100 transition-transform duration-1000 ease-out"
-        onError={(e) => {
-          // Fallback if needed
-          const target = e.target as HTMLImageElement;
-          target.src = '/src/assets/images/splash1_campus_crest_1790668349675.jpg';
+        className="absolute inset-0 w-full h-full object-cover opacity-40 scale-100 transition-transform duration-1000 ease-out"
+        referrerPolicy="no-referrer"
+        onError={() => {
+          if (imgSrc !== '/src/assets/images/splash2_learner_desk_1791992488500.jpg') {
+            setImgSrc('/src/assets/images/splash2_learner_desk_1791992488500.jpg');
+          }
         }}
       />
 

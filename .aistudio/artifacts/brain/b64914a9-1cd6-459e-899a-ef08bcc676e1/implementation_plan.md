@@ -1,133 +1,106 @@
-# Little Roses Academy - Entry Sequence & Portal Gate Implementation Plan
+# Little Roses Academy — Splash Screen Architecture & Customization Plan (Revised)
 
-Comprehensive implementation and visual alignment plan for the 4-stage entry experience of Little Roses Academy (Nakuru, Kenya), incorporating the user's verified reference imagery and replacing the portal gate shield with the official circular school logo.
+Upgrade the Little Roses Academy application opening experience with your exact campus crest photo for Splash 1, followed by the system readiness bar on Splash 2, plus an in-app photo customizer to add, change, or reset splash images anytime.
 
 ## User Review & Critical Decisions
 
 > [!IMPORTANT]
-> The user provided the 4 definitive visual references for the entry sequence and specified a critical design requirement for the portal gate:
-> - **Logo Asset**: The official circular emblem with navy outer ring, cream parchment disc, "LITTLE ROSES ACADEMY", "NAKURU", split blue/red mortarboard, red laurel wreath, and "MUCH FROM LITTLE".
-> - **Splash 1**: Campus grounds photograph under bright Kenyan skies with the official round crest centered.
-> - **Splash 2**: Learner in maroon uniform at a wooden desk with laptop (studying fractions), notebooks, and headphones, with "LEARN TODAY BUILD TOMORROW" and live 0–100% readiness indicator.
-> - **Portal View Revision**: Follows the dark navy 4-card security gate layout, with the top shield **explicitly replaced by the official school logo in a round form**.
+> **Splash 1 Exact Image & Display Rule (Confirmed)**:
+> - **Exact Photo Asset**: Splash 1 will display the exact Little Roses Academy Nakuru sunny campus and crest photograph (`file_0000000063ac8211a3ee2b9337a4e2cd.png` / `/src/assets/images/splash1_official_crest_1792069867802.jpg`).
+> - **Pure Visual Presentation**: 100% full opacity, full screen, exactly as provided.
+> - **Zero Overlays**: No dark gradient scrims, no duplicate logos, no school name text overlays, no "Tap anywhere to continue", and no skip buttons anywhere.
+> - **5-Second Timer**: Stays for exactly 5 seconds (5000ms), then automatically transitions to Splash 2.
 
-- **Confirmed Decision (Round Logo on Portal Gate)**: Replace the generic golden shield header in the portal gate with the official circular `Logo` component in round form, maintaining institutional authority.
-- **Timing & Transitions**:
-  - Splash 1: 5-second automatic progression with immediate tap-to-skip.
-  - Splash 2: Smooth 0% to 100% readiness progress bar incrementing system readiness before opening the portal gate.
-  - Portal Gate: 4 neon-accented role cards matching the reference layout:
-    1. *School Administration* (Gold border, building icon, "Admin code + password")
-    2. *Staff and Teachers* (Blue border, teacher icon, "Phone + password")
-    3. *Parents and Guardians* (Cyan/Emerald border, family icon, "Phone + password")
-    4. *Learners* (Purple border, graduation icon, "UPI + PIN")
+<div align="center">
+
+| Exact Target Splash 1 Photo |
+| :---: |
+| <img src="file_0000000063ac8211a3ee2b9337a4e2cd.png" width="280" alt="Exact Little Roses Academy Splash 1 Photo" /> |
+| *Display: 5.0s duration · 100% opacity · 0 overlays · 0 buttons* |
+
+</div>
+
+- **Confirmed Decision 2 (In-App Splash Customizer)**:
+  - Accessible via Admin Settings (School Profile) and quick action on the portal gate.
+  - Allows uploading any photo from your phone or computer for Splash 1 and Splash 2.
+  - Instant live thumbnail previews and one-click "Reset to Default" button.
+  - Option to adjust the Splash 1 duration (default 5 seconds).
+
+- **Confirmed Decision 3 (Splash 2 Readiness Experience)**:
+  - Shows the Kenyan CBC curriculum badge and the 0% $\to$ 100% system readiness progress bar.
+  - Uses the learner study photograph as background (also customizable via the in-app customizer).
+  - Automatically transitions to the central Portal Selection gate upon reaching 100%.
 
 ---
 
 ## 1. Overview & Core Concept
 
-- **What It Does**: Delivers an authentic, visually stunning entry experience that honors the Little Roses Academy heritage. It guides users through the lush campus grounds (Splash 1) and engaged classroom study (Splash 2), arriving at an institutional role gate (Portal Selection) crowned with the official circular school emblem.
-- **Target Audience / Personas**: Administrators, teachers, parents, and learners across Nakuru, accessing via mobile phones, tablets, or desktop.
-- **Key Value**: Provides instant school recognition, reinforces the motto "MUCH FROM LITTLE" and tagline "LEARN TODAY BUILD TOMORROW", and guarantees that each user group enters through their dedicated security door.
+- **What It Delivers**: A pristine, authentic welcome screen featuring the school's official Nakuru campus and crest photograph, completely unobstructed by UI controls or artificial overlays for 5 seconds, followed by the system readiness indicator, opening directly into the central school portal gate.
+- **Audience**: School administrators, teachers, parents, and learners across mobile and tablet devices.
+- **Key Value**: Professional institutional identity honoring the school's crest ("Much From Little") while granting administrators full control to update splash images whenever needed.
 
 ---
 
 ## 2. User Experience & Visual Design
 
-### 4-Stage Visual Sequence
+### Key User Flows
 
-```
-┌────────────────────────────────────────────────────────────────────────┐
-│                        STAGE 1: SPLASH 1 (5s)                          │
-│  • Full-bleed photograph of Little Roses stone campus buildings        │
-│  • Lush green lawn, pine trees, and bright blue sunny sky              │
-│  • Centered official round school crest with subtle gold illumination  │
-│  • "Tap anywhere to continue" skip affordance                          │
-└───────────────────────────────────┬────────────────────────────────────┘
-                                    │ (5s timer or tap)
-┌───────────────────────────────────▼────────────────────────────────────┐
-│                        STAGE 2: SPLASH 2                               │
-│  • Authentic learning photograph: Grade 5 pupil in maroon sweater      │
-│  • Laptop showing Mathematics Fractions, open notebook, headphones    │
-│  • Centered round school logo with tagline: "LEARN TODAY BUILD TOMORROW"│
-│  • "KENYAN CBC · Primary School · Grades 1-6"                          │
-│  • Smooth 0% -> 100% System Readiness Progress Bar                     │
-└───────────────────────────────────┬────────────────────────────────────┘
-                                    │ (Completes at 100%)
-┌───────────────────────────────────▼────────────────────────────────────┐
-│              STAGE 3: SELECT SECURITY PORTAL (GATE)                    │
-│                                                                        │
-│                 [ OFFICIAL ROUND SCHOOL LOGO ]                         │
-│                    SELECT SECURITY PORTAL                              │
-│                                                                        │
-│  ┌───────────────────────────────┐   ┌───────────────────────────────┐ │
-│  │ 🏫 School Administration      │   │ 👨‍🏫 Staff and Teachers         │ │
-│  │    Admin code + password      │   │    Phone + password           │ │
-│  │    Gold outline & icon        │   │    Blue outline & icon        │ │
-│  └───────────────────────────────┘   └───────────────────────────────┘ │
-│  ┌───────────────────────────────┐   ┌───────────────────────────────┐ │
-│  │ 👨‍👩‍👧 Parents and Guardians     │   │ 🎓 Learners                   │ │
-│  │    Phone + password           │   │    UPI + PIN                  │ │
-│  │    Cyan/Emerald outline & icon│   │    Purple outline & icon      │ │
-│  └───────────────────────────────┘   └───────────────────────────────┘ │
-└───────────────────────────────────┬────────────────────────────────────┘
-                                    │ (Tap opens role sign-in)
-┌───────────────────────────────────▼────────────────────────────────────┐
-│                    STAGE 4: DEDICATED SIGN-IN                          │
-│  • Admin: Admin code + password                                        │
-│  • Teachers: Phone + password                                          │
-│  • Guardians: Phone + password                                         │
-│  • Learners: UPI + 4-digit PIN (with 5-attempt rate-limit lockout)     │
-└────────────────────────────────────────────────────────────────────────┘
-```
+1. **Pure Splash 1 (0–5 seconds)**:
+   - App launches immediately displaying your exact campus crest photo edge-to-edge.
+   - Clean framing in deep academy navy (`#070D1E`) with `object-cover object-center`.
+   - No interactive elements or text badges to distract from the image.
+   - Transitions automatically to Splash 2 at the 5-second mark.
 
-### Aesthetic & Visual Rules
+2. **Splash 2 (System Readiness & Gate Entrance)**:
+   - Displays the study desk photo (or customized Splash 2 image).
+   - Animated progress bar counts smoothly from 0% to 100% ("Encrypted School Gate").
+   - Completes smoothly and advances directly to the 4-portal selection screen.
 
-- **Round Logo Integration**:
-  - The official crest is rendered in an exact vector circle with navy border `#2E486D`, parchment disc `#ECD8C0`, and crisp typography.
-  - In Portal Gate: Positioned prominently at the top above "SELECT SECURITY PORTAL", replacing the generic shield.
-- **Card Styling & Neon Boundaries**:
-  - High-density dark slate canvas (`#070D1E` / `bg-slate-950`).
-  - Subtle glowing borders with soft inner radial gradients:
-    - Admin: Amber/Gold glow (`border-amber-500/50`, `text-amber-400`).
-    - Teachers: Electric Blue glow (`border-blue-500/50`, `text-blue-400`).
-    - Guardians: Emerald/Cyan glow (`border-emerald-500/50`, `text-emerald-400`).
-    - Learners: Royal Purple glow (`border-purple-500/50`, `text-purple-400`).
-  - No static pill sandwiches; credential hints use clean unboxed text with icons (`Admin code + password`, `Phone + password`, `UPI + PIN`).
-  - Touch targets strictly exceed $44 \times 44\text{px}$ with smooth settling curves (`cubic-bezier(0.16, 1, 0.3, 1)`).
+3. **In-App Splash Customizer Modal**:
+   - Opens as a centered, responsive glass modal.
+   - **Splash 1 Tab**: View current photo, upload new file (`<input type="file" accept="image/*">`), or click "Reset to Official Photo".
+   - **Splash 2 Tab**: View current photo, upload new file, or select academy presets (Campus Grounds / Learner Study).
+   - **Duration Control**: Slider from 2s to 10s (default set to 5s).
+   - **Test & Apply**: "Save & Play Splash Flow" button lets you immediately see the 5-second Splash 1 in action.
 
 ---
 
-## 3. Key Product Decisions & Trade-Offs
+## 3. Key Technical Decisions & Storage Strategy
 
-- **Decision 1: Round Logo Replacement for Portal Shield**:
-  - *Chosen Approach*: Replace the generic shield at the top of the portal gate with the official circular Little Roses Academy logo disc.
-  - *Why*: Directly fulfills the user's explicit request and reinforces institutional trust and brand continuity across all devices.
-  - *Alternatives Considered*: Retaining the generic shield, which conflicts with school branding.
-
-- **Decision 2: High-Fidelity Asset Pipeline for Splash 1 & Splash 2**:
-  - *Chosen Approach*: Pair authentic visual assets for the campus grounds (Splash 1) and desk study (Splash 2) with contrast gradient scrims and styled SVG/CSS fallbacks so no screen ever breaks or flickers.
-  - *Why*: Satisfies the Zero-Broken-Image policy while honoring the real Nakuru campus and CBC curriculum context.
-
-- **Decision 3: Non-Blocking 5-Second Timer on Splash 1**:
-  - *Chosen Approach*: 5000ms timer for first impressions, with instant click-to-skip so frequent daily teachers and parents are never delayed.
-  - *Why*: Satisfies PRD v7 Section 4 while maintaining mobile ergonomic speed.
+- **Primary Splash 1 Image Asset**:
+  - The exact photo is stored locally as `/src/assets/images/splash1_official_crest_1792069867802.jpg` (with fallback to `/src/assets/images/splash1_campus_crest_1790668349675.jpg`).
+- **Persistent Customization**:
+  - `dataLayer.getSchoolProfile()` / `saveSchoolProfile()` stores `splash1ImageUrl`, `splash2ImageUrl`, and `splash1DurationSeconds`.
+  - When an admin uploads a new file, it is converted to a base64 Data URL and stored in localStorage, surviving browser refreshes and offline reboots.
+- **Zero-Overlay Enforcement**:
+  - `Splash1.tsx` renders solely the `<img>` element with `w-full h-full object-cover`. All previous absolute scrim divs, `<Logo />` overlays, and footer pills are removed.
 
 ---
 
-## 4. Technical Architecture & Component Mapping
+## 4. System Architecture Diagram
 
-### Components to Update Upon Approval
-
-1. **`src/components/Splash1.tsx`**:
-   - Set 5000ms duration per PRD v7.
-   - Embed authentic school-ground imagery with centered round crest and "Tap anywhere to continue" skip cue.
-2. **`src/components/Splash2.tsx`**:
-   - Integrate learner desk study imagery with centered round crest.
-   - Display "KENYAN CBC · Primary School · Grades 1-6" and "LEARN TODAY BUILD TOMORROW".
-   - Visible 0% to 100% readiness progress bar triggering transition on completion.
-3. **`src/components/PortalSelection.tsx`**:
-   - Crown the top of the screen with the official round `Logo` (circular form).
-   - Style the "SELECT SECURITY PORTAL" header with elegant gold typography.
-   - Refine the 4 role cards (School Administration, Staff and Teachers, Parents and Guardians, Learners) with their respective glowing borders, circular icons, and sign-in cues.
-4. **`src/components/Logo.tsx`**:
-   - Verify the circular round form conforms exactly to `institute_logo_1778247137607.jpg`.
+```
+┌─────────────────────────────────────────────────────────────┐
+│                          App.tsx                            │
+│  State: screen = 'splash1' (5s) -> 'splash2' -> 'portals'   │
+│  State: isSplashCustomizerOpen (boolean)                    │
+└──────────────┬──────────────────────────────┬───────────────┘
+               │                              │
+       ┌───────┴───────┐              ┌───────┴───────┐
+       ▼               ▼              ▼               ▼
+┌──────────────┐┌──────────────┐┌──────────────┐┌──────────────────────┐
+│  Splash1.tsx ││  Splash2.tsx ││PortalSelect. ││SplashCustomizerModal │
+│ • Exact Photo││ • Readiness  ││ • 4 Portals  ││ • Upload device photo│
+│ • 5s Timer   ││   Progress   ││ • Customizer ││ • Presets & duration │
+│ • 0 Overlays ││ • Custom bg  ││   trigger    ││ • Live test button   │
+└──────┬───────┘└──────┬───────┘└──────────────┘└──────────┬───────────┘
+       │               │                                   │
+       └───────────────┼───────────────────────────────────┘
+                       ▼
+       ┌───────────────────────────────┐
+       │     dataLayer.ts (Storage)    │
+       │ • splash1ImageUrl             │
+       │ • splash2ImageUrl             │
+       │ • splash1DurationSeconds      │
+       └───────────────────────────────┘
+```

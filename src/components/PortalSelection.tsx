@@ -1,14 +1,15 @@
 import React from 'react';
 import { Logo } from './Logo.tsx';
-import { Building2, BookOpen, Users, GraduationCap, Lock, Smartphone, KeyRound, ChevronRight } from 'lucide-react';
+import { Building2, BookOpen, Users, GraduationCap, Lock, Smartphone, KeyRound, ChevronRight, Sparkles } from 'lucide-react';
 
 export type PortalType = 'admin' | 'teachers' | 'parents' | 'learners';
 
 interface PortalSelectionProps {
   onSelectPortal: (portal: PortalType) => void;
+  onOpenSplashCustomizer?: () => void;
 }
 
-export function PortalSelection({ onSelectPortal }: PortalSelectionProps) {
+export function PortalSelection({ onSelectPortal, onOpenSplashCustomizer }: PortalSelectionProps) {
   const portals = [
     {
       id: 'admin' as const,
@@ -136,11 +137,24 @@ export function PortalSelection({ onSelectPortal }: PortalSelectionProps) {
         })}
       </div>
 
-      {/* Footer System Attribution */}
-      <div className="text-center text-[10px] text-slate-500 font-mono py-2">
-        <span>LEARN TODAY BUILD TOMORROW</span>
-        <span className="mx-2">·</span>
-        <span>CBC Secure Access</span>
+      {/* Footer System Attribution & Splash Customizer Action */}
+      <div className="flex flex-col sm:flex-row items-center justify-center gap-3 text-center text-[10px] text-slate-500 font-mono py-2">
+        <div className="flex items-center gap-2">
+          <span>LEARN TODAY BUILD TOMORROW</span>
+          <span>·</span>
+          <span>CBC Secure Access</span>
+        </div>
+
+        {onOpenSplashCustomizer && (
+          <button
+            type="button"
+            onClick={onOpenSplashCustomizer}
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900/90 hover:bg-slate-800 text-slate-400 hover:text-amber-300 border border-slate-800 hover:border-amber-400/40 transition-colors cursor-pointer text-[10px]"
+          >
+            <Sparkles className="w-3 h-3 text-amber-400" />
+            <span>Customise Splash</span>
+          </button>
+        )}
       </div>
     </div>
   );

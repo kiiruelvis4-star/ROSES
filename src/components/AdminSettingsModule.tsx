@@ -92,6 +92,7 @@ import {
   formatBytes,
 } from './AdminResourceWorkspace.tsx';
 import { Logo } from './Logo.tsx';
+import { SplashCustomizerModal } from './SplashCustomizerModal.tsx';
 
 export type SettingsSectionId =
   | 'school_profile'
@@ -260,6 +261,7 @@ export function AdminSettingsModule({
   // Navigation: null = settings list; string = active section screen
   const [activeSectionId, setActiveSectionId] = useState<SettingsSectionId | null>(null);
   const [searchFilter, setSearchFilter] = useState('');
+  const [isSplashModalOpen, setIsSplashModalOpen] = useState(false);
 
   // Real data references (zero fake values)
   const activeAcademicYear = useMemo(() => dataLayer.getActiveAcademicYear(), []);
@@ -1755,6 +1757,69 @@ export function AdminSettingsModule({
                       <p className="text-[10px] text-slate-500 leading-normal">
                         Accepts PNG, JPG, WebP, SVG (max 2 MB). Does not alter existing splash screens automatically.
                       </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 1.1 School Splash Screens (Splash 1 & Splash 2) */}
+                <div className="p-5 sm:p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4 shadow-md">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div className="space-y-1">
+                      <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-amber-400" />
+                        Splash Screens (Splash 1 & Splash 2)
+                      </h3>
+                      <p className="text-xs text-slate-400">
+                        Opening welcoming screens: Splash 1 (pure 5-second campus photo) & Splash 2 (curriculum readiness).
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsSplashModalOpen(true)}
+                      className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md shrink-0"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Customise Splash Images</span>
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                    <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800/80 flex items-center gap-3">
+                      <div className="w-12 h-20 rounded-lg overflow-hidden border border-slate-700 bg-black shrink-0">
+                        <img
+                          src={profile.splash1ImageUrl || '/src/assets/images/splash1_official_crest_1792069867802.jpg'}
+                          alt="Splash 1 thumbnail"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="text-xs space-y-1">
+                        <span className="font-bold text-white block">Splash 1 Screen</span>
+                        <span className="text-slate-400 text-[11px] block">
+                          5-second pure photo display without overlays
+                        </span>
+                        <span className="text-[10px] text-amber-400 font-mono">
+                          {profile.splash1ImageUrl ? 'Custom Image Active' : 'Official Campus Photo'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800/80 flex items-center gap-3">
+                      <div className="w-12 h-20 rounded-lg overflow-hidden border border-slate-700 bg-black shrink-0">
+                        <img
+                          src={profile.splash2ImageUrl || '/src/assets/images/splash2_learner_desk_1791992488500.jpg'}
+                          alt="Splash 2 thumbnail"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="text-xs space-y-1">
+                        <span className="font-bold text-white block">Splash 2 Screen</span>
+                        <span className="text-slate-400 text-[11px] block">
+                          CBC System readiness indicator bar
+                        </span>
+                        <span className="text-[10px] text-blue-400 font-mono">
+                          {profile.splash2ImageUrl ? 'Custom Image Active' : 'Learner Study Desk Photo'}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -6785,6 +6850,16 @@ export function AdminSettingsModule({
           </div>
         </div>
       )}
+
+      {/* Splash Screens Customizer Modal */}
+      <SplashCustomizerModal
+        isOpen={isSplashModalOpen}
+        onClose={() => setIsSplashModalOpen(false)}
+        onPreviewSplashFlow={() => {
+          setIsSplashModalOpen(false);
+          onNavigateHome();
+        }}
+      />
     </div>
   );
 }

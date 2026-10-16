@@ -22,7 +22,9 @@ import {
   ShieldCheck,
   Inbox,
   ArrowRight,
+  Share2,
 } from 'lucide-react';
+import { SharePreviewModal } from './SharePreviewModal.tsx';
 import {
   dataLayer,
   getTeacherGradeAssignments,
@@ -106,6 +108,33 @@ export function TeacherResourcesStudio({
   const [previewSearchTerm, setPreviewSearchTerm] = useState('');
   const [studioTab, setStudioTab] = useState<'category' | 'dispatched'>('category');
   const [dispatchedSearchQuery, setDispatchedSearchQuery] = useState('');
+  const [studioShareConfig, setStudioShareConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    customText: string;
+  } | null>(null);
+
+  const handleShareStudioDocument = (doc: { title: string; name?: string; fileName?: string; content?: string }) => {
+    const docName = doc.name || doc.fileName || 'Curriculum Reference';
+    const content = doc.content || `LITTLE ROSES ACADEMY - CURRICULUM RESOURCE\nTitle: ${doc.title}\nCategory: ${selectedCategory}\nGrade: ${selectedGrade} • Subject: ${selectedSubject}\n\nThis educational document is officially certified for Little Roses Academy CBC learning.`;
+    const shareText = `🏫 LITTLE ROSES ACADEMY - NAKURU
+Curriculum Document / Lesson Plan
+━━━━━━━━━━━━━━━━━━━━━━━━
+Title: ${doc.title}
+Class: ${selectedGrade} · ${selectedSubject}
+Document: ${docName}
+
+${content.slice(0, 1000)}${content.length > 1000 ? '\n\n[...Full document available in Little Roses Portal]' : ''}
+
+Certified by School Head & Principal Office
+"Much from Little"`;
+
+    setStudioShareConfig({
+      isOpen: true,
+      title: `Share Document: ${doc.title}`,
+      customText: shareText,
+    });
+  };
 
   const teacherAssignments = useMemo(() => {
     return getTeacherGradeAssignments(currentTeacher as any);
@@ -862,35 +891,49 @@ export function TeacherResourcesStudio({
           </div>
         </div>
 
-        {/* 15 Categories Grid */}
+        {/* Vibrant 15 Categories Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
-          {TEACHER_CATEGORIES.map((c) => (
-            <button
-              key={c.id}
-              onClick={() => {
-                setSelectedCategory(c.id);
-                showToast(`Opened ${c.title}`);
-              }}
-              className={`p-3 rounded-xl border text-left flex items-start gap-2.5 transition cursor-pointer ${
-                selectedCategory === c.id
-                  ? 'bg-amber-500/10 border-amber-500 text-white shadow-sm ring-1 ring-amber-500/30'
-                  : 'bg-slate-900/60 border-slate-800 text-slate-300 hover:border-slate-700'
-              }`}
-            >
-              <span className="text-xl flex-shrink-0">{c.icon}</span>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between gap-1">
-                  <span className="text-xs font-bold block truncate">{c.title}</span>
-                  {(categoryCounts[c.id] || 0) > 0 && (
-                    <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300 font-mono font-bold shrink-0">
-                      {categoryCounts[c.id]}
-                    </span>
-                  )}
+          {TEACHER_CATEGORIES.map((c) => {
+            const gradients: Record<string, string> = {
+              schemes: 'bg-gradient-to-br from-purple-900/40 via-purple-950/60 to-slate-900 border-purple-500/40 hover:border-purple-400',
+              lesson_plans: 'bg-gradient-to-br from-emerald-900/40 via-emerald-950/60 to-slate-900 border-emerald-500/40 hover:border-emerald-400',
+              lesson_notes: 'bg-gradient-to-br from-amber-900/40 via-amber-950/60 to-slate-900 border-amber-500/40 hover:border-amber-400',
+              records_of_work: 'bg-gradient-to-br from-blue-900/40 via-blue-950/60 to-slate-900 border-blue-500/40 hover:border-blue-400',
+              cats_assessments: 'bg-gradient-to-br from-rose-900/40 via-rose-950/60 to-slate-900 border-rose-500/40 hover:border-rose-400',
+              rubrics: 'bg-gradient-to-br from-cyan-900/40 via-cyan-950/60 to-slate-900 border-cyan-500/40 hover:border-cyan-400',
+              class_notes: 'bg-gradient-to-br from-teal-900/40 via-teal-950/60 to-slate-900 border-teal-500/40 hover:border-teal-400',
+              assignments: 'bg-gradient-to-br from-fuchsia-900/40 via-fuchsia-950/60 to-slate-900 border-fuchsia-500/40 hover:border-fuchsia-400',
+            };
+            const theme = gradients[c.id] || 'bg-slate-900/60 border-slate-800 text-slate-300 hover:border-slate-700';
+
+            return (
+              <button
+                key={c.id}
+                onClick={() => {
+                  setSelectedCategory(c.id);
+                  showToast(`Opened ${c.title}`);
+                }}
+                className={`p-3 rounded-2xl border text-left flex items-start gap-2.5 transition-all duration-200 cursor-pointer shadow-sm hover:scale-[1.02] active:scale-98 ${
+                  selectedCategory === c.id
+                    ? 'ring-2 ring-amber-400 border-amber-400 shadow-md text-white'
+                    : theme
+                }`}
+              >
+                <span className="text-2xl p-1.5 rounded-xl bg-slate-950/60 flex-shrink-0 shadow-inner">{c.icon}</span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="text-xs font-bold block truncate text-white">{c.title}</span>
+                    {(categoryCounts[c.id] || 0) > 0 && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 font-mono font-bold shrink-0 border border-amber-400/30">
+                        {categoryCounts[c.id]}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[10px] text-slate-300 block truncate mt-0.5">{c.desc}</span>
                 </div>
-                <span className="text-[10px] text-slate-400 block truncate">{c.desc}</span>
-              </div>
-            </button>
-          ))}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -1242,6 +1285,16 @@ export function TeacherResourcesStudio({
                 >
                   <Printer className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">Print</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleShareStudioDocument(previewDoc)}
+                  className="px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold flex items-center gap-1 cursor-pointer shadow-sm transition"
+                  title="Share document or lesson plan via Web Share API / WhatsApp"
+                >
+                  <Share2 className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Share (Native OS)</span>
                 </button>
 
                 <button

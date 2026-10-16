@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Logo } from './Logo.tsx';
 import { ConnectionPill } from './ConnectionPill.tsx';
 import { dataLayer, subscribeToDataLayer } from '../services/dataLayer.ts';
-import { LogOut, ArrowLeft, Menu, Sun, Moon } from 'lucide-react';
+import { LogOut, ArrowLeft, Menu, Sun, Moon, Sparkles } from 'lucide-react';
 import { PWAInstallButton } from './PWAInstallButton.tsx';
 
 interface HeaderProps {
@@ -16,6 +16,8 @@ interface HeaderProps {
   showLogout?: boolean;
   onLogout?: () => void;
   rightAction?: React.ReactNode;
+  showAIButton?: boolean;
+  onOpenAI?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -29,6 +31,8 @@ export const Header: React.FC<HeaderProps> = ({
   showLogout = false,
   onLogout,
   rightAction,
+  showAIButton = true,
+  onOpenAI,
 }) => {
   const [termInfo, setTermInfo] = useState(dataLayer.getAcademicTermInfo());
   const [themeMode, setThemeMode] = useState<'light' | 'dark'>(() => {
@@ -127,6 +131,20 @@ export const Header: React.FC<HeaderProps> = ({
 
           <PWAInstallButton compact />
           <ConnectionPill />
+
+          {/* Central Little Roses School AI Trigger */}
+          {onOpenAI && (
+            <button
+              type="button"
+              onClick={onOpenAI}
+              className="p-1.5 sm:p-2 rounded-xl bg-gradient-to-r from-amber-400/20 via-blue-500/20 to-amber-400/20 hover:from-amber-400/30 hover:to-blue-500/30 text-amber-300 hover:text-white border border-amber-400/40 transition active:scale-95 cursor-pointer shadow-sm flex items-center gap-1.5"
+              title="Open Little Roses School AI (Grounded CBC Intelligence)"
+              aria-label="Open Little Roses School AI"
+            >
+              <Sparkles className="w-4 h-4 text-amber-400 animate-pulse" />
+              <span className="text-[11px] font-bold hidden sm:inline text-white">School AI</span>
+            </button>
+          )}
 
           {rightAction}
 

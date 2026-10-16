@@ -100,6 +100,7 @@ import { AdminPromotionModule } from './AdminPromotionModule.tsx';
 import { AdminSettingsModule } from './AdminSettingsModule.tsx';
 import { AdminAssessmentPortal } from './AdminAssessmentPortal.tsx';
 import { OfflineAIDocumentAssistantModal } from './OfflineAIDocumentAssistantModal.tsx';
+import { CentralSchoolAIModal } from './CentralSchoolAIModal.tsx';
 import { extractTextFromFile } from '../services/aiDocumentAssistant.ts';
 import {
   TeacherModal,
@@ -278,6 +279,8 @@ export function AdminPortal({
   const [resourcesRevision, setResourcesRevision] = useState(0);
   const [isAddingResource, setIsAddingResource] = useState(false);
   const [showAIAssistantModal, setShowAIAssistantModal] = useState(false);
+  const [showCentralAIModal, setShowCentralAIModal] = useState(false);
+  const [centralAITab, setCentralAITab] = useState<'chat' | 'document_intelligence' | 'assessment_generator' | 'progress_analyzer'>('chat');
   const [treeExpandedTeachers, setTreeExpandedTeachers] = useState<string[]>([]);
   const [treeExpandedGrades, setTreeExpandedGrades] = useState<string[]>([]);
   const [showResourceTree, setShowResourceTree] = useState(true);
@@ -2705,6 +2708,20 @@ export function AdminPortal({
               <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-600 text-white text-[9px] font-black flex items-center justify-center shadow">
                 0
               </span>
+            </button>
+
+            {/* Central School AI Trigger */}
+            <button
+              type="button"
+              onClick={() => {
+                setCentralAITab('chat');
+                setShowCentralAIModal(true);
+              }}
+              className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-400/20 via-blue-500/20 to-amber-400/20 hover:from-amber-400/30 hover:to-blue-500/30 border border-amber-400/40 text-amber-300 hover:text-white transition cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95 text-xs font-bold"
+              title="Open Little Roses School AI (Central Oversight & Mismatch Engine)"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+              <span className="hidden sm:inline text-white">School AI</span>
             </button>
 
             {/* Admin Profile Identity Chip */}
@@ -7410,45 +7427,55 @@ export function AdminPortal({
                             <span className="text-[11px] text-slate-500">Tap category to view installed files</span>
                           </div>
 
-                          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
-                            {RESOURCE_CATEGORIES.map((cat) => {
+                          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                            {RESOURCE_CATEGORIES.map((cat, idx) => {
                               const count = allStoredResources.filter((r) => r.categoryId === cat.id).length;
+                              
+                              const gradients: Record<string, { bg: string; border: string }> = {
+                                schemes_of_work: { bg: 'bg-gradient-to-br from-purple-600 via-indigo-600 to-purple-800 text-white shadow-purple-600/20', border: 'border-purple-400/40' },
+                                lesson_plans: { bg: 'bg-gradient-to-br from-emerald-500 via-teal-600 to-emerald-800 text-white shadow-emerald-600/20', border: 'border-emerald-400/40' },
+                                lesson_notes: { bg: 'bg-gradient-to-br from-amber-500 via-orange-500 to-amber-700 text-white shadow-amber-600/20', border: 'border-amber-400/40' },
+                                assessments_cats: { bg: 'bg-gradient-to-br from-rose-500 via-pink-600 to-rose-800 text-white shadow-rose-600/20', border: 'border-rose-400/40' },
+                                rubrics: { bg: 'bg-gradient-to-br from-cyan-500 via-sky-600 to-blue-700 text-white shadow-cyan-600/20', border: 'border-cyan-400/40' },
+                                record_of_work: { bg: 'bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-900 text-white shadow-blue-600/20', border: 'border-blue-400/40' },
+                                pdf_documents: { bg: 'bg-gradient-to-br from-sky-500 via-blue-500 to-indigo-600 text-white shadow-sky-600/20', border: 'border-sky-400/40' },
+                                revision_materials: { bg: 'bg-gradient-to-br from-violet-500 via-purple-600 to-fuchsia-700 text-white shadow-violet-600/20', border: 'border-violet-400/40' },
+                                class_notes: { bg: 'bg-gradient-to-br from-teal-500 via-emerald-600 to-teal-800 text-white shadow-teal-600/20', border: 'border-teal-400/40' },
+                                assignments: { bg: 'bg-gradient-to-br from-fuchsia-600 via-purple-600 to-indigo-700 text-white shadow-fuchsia-600/20', border: 'border-fuchsia-400/40' },
+                              };
+
+                              const theme = gradients[cat.id] || { 
+                                bg: 'bg-gradient-to-br from-slate-800 via-slate-850 to-slate-900 text-white shadow-black/20', 
+                                border: 'border-slate-700/60' 
+                              };
 
                               return (
                                 <button
                                   key={cat.id}
                                   onClick={() => setSelectedResourceCategory(cat.id)}
-                                  className={`p-3.5 rounded-xl border text-left flex flex-col justify-between space-y-2.5 transition cursor-pointer hover:scale-[1.02] active:scale-98 group ${
-                                    count > 0
-                                      ? 'bg-slate-900/90 border-slate-800 hover:border-amber-500'
-                                      : 'bg-slate-900/40 border-slate-800/80 hover:border-slate-700'
-                                  }`}
+                                  className={`p-4 rounded-2xl border text-left flex flex-col justify-between space-y-3 transition-all duration-200 cursor-pointer hover:scale-[1.03] active:scale-98 shadow-md group ${theme.bg} ${theme.border}`}
                                 >
                                   <div className="flex items-center justify-between w-full">
-                                    <span className="text-xl p-1.5 rounded-lg bg-slate-950/60 group-hover:scale-110 transition-transform">
+                                    <span className="text-2xl p-2 rounded-xl bg-white/20 backdrop-blur-sm shadow-sm group-hover:scale-110 transition-transform">
                                       {cat.icon}
                                     </span>
-                                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold ${
-                                      count > 0
-                                        ? 'bg-amber-500/20 text-amber-400'
-                                        : 'bg-slate-800/60 text-slate-500'
-                                    }`}>
+                                    <span className="text-[10px] px-2 py-0.5 rounded-full font-mono font-bold bg-white/20 backdrop-blur-sm text-white">
                                       {count} {count === 1 ? 'file' : 'files'}
                                     </span>
                                   </div>
 
                                   <div>
-                                    <span className="text-xs font-bold text-white block group-hover:text-amber-400 transition-colors">
+                                    <span className="text-sm font-extrabold text-white block group-hover:text-amber-200 transition-colors">
                                       {cat.name}
                                     </span>
-                                    <span className="text-[10px] text-slate-500 mt-0.5 block">
-                                      {count === 0 ? 'No files installed' : `${count} available`}
+                                    <span className="text-[11px] text-white/80 mt-0.5 block font-medium">
+                                      {count === 0 ? 'No files installed' : `${count} resources ready`}
                                     </span>
                                   </div>
 
-                                  <div className="pt-1.5 border-t border-slate-800/80 flex items-center justify-between w-full text-[10px] text-slate-400">
-                                    <span>Browse</span>
-                                    <span className="group-hover:translate-x-0.5 transition-transform text-amber-400 font-bold">→</span>
+                                  <div className="pt-2 border-t border-white/20 flex items-center justify-between w-full text-[11px] text-white/90 font-bold">
+                                    <span>Browse Library</span>
+                                    <span className="group-hover:translate-x-1 transition-transform">→</span>
                                   </div>
                                 </button>
                               );
@@ -8008,6 +8035,14 @@ export function AdminPortal({
           });
           setTimeout(() => setUploadStatusBanner(null), 6000);
         }}
+      />
+
+      {/* CENTRAL LITTLE ROSES SCHOOL AI MODAL */}
+      <CentralSchoolAIModal
+        isOpen={showCentralAIModal}
+        onClose={() => setShowCentralAIModal(false)}
+        session={dataLayer.getCurrentSession()}
+        initialTab={centralAITab}
       />
     </div>
   );

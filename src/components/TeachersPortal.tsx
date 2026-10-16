@@ -59,7 +59,16 @@ import { CircularBadgeLogo } from './CircularBadgeLogo';
 import { TeacherResourcesStudio } from './TeacherResourcesStudio.tsx';
 import { PortalDrawer } from './PortalDrawer.tsx';
 import { PortalSwitcherBadge } from './PortalSwitcherBadge.tsx';
+import { CentralSchoolAIModal } from './CentralSchoolAIModal.tsx';
+import { SharePreviewModal } from './SharePreviewModal.tsx';
 import { downloadCBCReportCard, downloadStorybook } from '../utils/downloadPDF.ts';
+import {
+  PupilShareData,
+  LessonPlanShareData,
+  shareStudentProgressReport,
+  shareLessonPlan,
+  isWebShareSupported,
+} from '../utils/webShare.ts';
 import {
   TeacherRecord,
   getRegisteredTeachers,
@@ -884,6 +893,8 @@ export function TeachersPortal({
 
   // Top-left 3-line hamburger menu state
   const [showTeacherMenu, setShowTeacherMenu] = useState(false);
+  const [showSchoolAIModal, setShowSchoolAIModal] = useState(false);
+  const [schoolAITab, setSchoolAITab] = useState<'chat' | 'document_intelligence' | 'assessment_generator' | 'progress_analyzer'>('chat');
 
   useEffect(() => {
     if (mainContentRef.current) {
@@ -906,6 +917,18 @@ export function TeachersPortal({
       >
     >
   >({});
+
+  // Web Share API Modal state for sharing progress reports & lesson plans
+  const [shareModalConfig, setShareModalConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    shareType: 'progress_report' | 'lesson_plan' | 'custom';
+    pupilData?: PupilShareData;
+    lessonData?: LessonPlanShareData;
+    customText?: string;
+    recipientPhone?: string;
+    recipientName?: string;
+  } | null>(null);
 
   // Active Teacher Session (WhatsApp-style persistent lock-in)
   const [currentTeacher, setCurrentTeacher] = useState<TeacherRecord | null>(() => {
@@ -999,6 +1022,69 @@ export function TeachersPortal({
       if (filtered.length > 0) return filtered;
     }
     return getLraSubjectsForGrade(grade).slice(0, 1);
+  };
+
+  // Helper to open Web Share modal for Pupil CBC progress report
+  const handleSharePupilProgress = (pupil: PupilRecord) => {
+    const gradeSubs = getLraSubjectsForGrade(pupil.grade || 'Grade 4');
+    const subjects = gradeSubs.slice(0, 5).map((subj, idx) => {
+      const cat = idx === 0 ? 52 : idx === 1 ? 48 : idx === 2 ? 45 : 40;
+      const asg = idx === 0 ? 36 : idx === 1 ? 32 : idx === 2 ? 30 : 28;
+      const total = cat + asg;
+      const band = total >= 80 ? 'EE' : total >= 60 ? 'ME' : total >= 40 ? 'AE' : 'BE';
+      return { subject: subj, cat, asg, total, band };
+    });
+
+    const pupilData: PupilShareData = {
+      upi: pupil.upi,
+      name: pupil.name,
+      grade: pupil.grade,
+      parentName: pupil.parentName,
+      parentPhone: pupil.parentPhone,
+      parentRelation: pupil.parentRelation,
+      recentAttainment: pupil.recentAttainment,
+      recentTopic: pupil.recentTopic,
+      focusZoneNotes: pupil.focusZoneNotes,
+      subjects,
+      term: 'Term 1',
+      academicYear: '2026',
+      classTeacherName: currentTeacher?.name,
+    };
+
+    setShareModalConfig({
+      isOpen: true,
+      title: `Share Progress: ${pupil.name}`,
+      shareType: 'progress_report',
+      pupilData,
+      recipientPhone: pupil.parentPhone,
+      recipientName: `${pupil.parentName} (${pupil.parentRelation || 'Parent'})`,
+    });
+  };
+
+  // Helper to open Web Share modal for Lesson Plan & Homework
+  const handleShareLessonPlan = (lesson: LessonPeriodItem) => {
+    const lessonData: LessonPlanShareData = {
+      id: lesson.id,
+      grade: lesson.grade,
+      subject: lesson.subject,
+      topic: lesson.topic,
+      time: lesson.time,
+      duration: lesson.duration,
+      room: lesson.room,
+      strand: `${lesson.subject} Learning Strand`,
+      subStrand: lesson.topic,
+      learningOutcomes: `Learners identify and apply practical concepts in ${lesson.topic} through CBC collaborative inquiry.`,
+      resourcesNeeded: 'Approved Kenya CBE Coursebook, Activity Worksheets, Realia & Visual Charts.',
+      homeworkSheet: lesson.homeworkSheet,
+      teacherName: currentTeacher?.name,
+    };
+
+    setShareModalConfig({
+      isOpen: true,
+      title: `Share Lesson Plan: ${lesson.subject}`,
+      shareType: 'lesson_plan',
+      lessonData,
+    });
   };
 
   // Login Screen states
@@ -2002,13 +2088,24 @@ export function TeachersPortal({
                               Topic: {lesson.topic} · Room: {lesson.room}
                             </p>
                           </div>
-                          <button
-                            onClick={() => setEditingLesson({ ...lesson })}
-                            className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 font-bold text-xs flex items-center gap-1 cursor-pointer transition-all"
-                          >
-                            <Edit3 className="w-3 h-3" />
-                            <span>Edit Details</span>
-                          </button>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleShareLessonPlan(lesson)}
+                              className="px-2.5 py-1 rounded-lg bg-cyan-50 hover:bg-cyan-100 text-cyan-800 border border-cyan-200 font-bold text-xs flex items-center gap-1 cursor-pointer transition-all"
+                              title="Share lesson plan with parents via native Web Share API"
+                            >
+                              <Share2 className="w-3 h-3 text-cyan-600" />
+                              <span>Share Plan</span>
+                            </button>
+                            <button
+                              onClick={() => setEditingLesson({ ...lesson })}
+                              className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 font-bold text-xs flex items-center gap-1 cursor-pointer transition-all"
+                            >
+                              <Edit3 className="w-3 h-3" />
+                              <span>Edit Details</span>
+                            </button>
+                          </div>
                         </div>
 
                         {/* Segmented Sub-Tab Switcher (Prevents vertical clutter) */}
@@ -2066,13 +2163,25 @@ export function TeachersPortal({
                               <div className="text-xs text-rose-800 font-bold">
                                 Due Date: {lesson.homeworkSheet.dueDate}
                               </div>
-                              <button
-                                onClick={() => handlePushLessonAssignment(lesson)}
-                                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow transition-all cursor-pointer active:scale-95"
-                              >
-                                <Send className="w-3.5 h-3.5" />
-                                <span>Push Assignment to Learners & Parents 🚀</span>
-                              </button>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => handleShareLessonPlan(lesson)}
+                                  className="px-3.5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow transition-all cursor-pointer active:scale-95"
+                                  title="Share Lesson Plan & Homework with Parents via Native OS (Web Share API)"
+                                >
+                                  <Share2 className="w-3.5 h-3.5" />
+                                  <span>Share Plan (Native OS)</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handlePushLessonAssignment(lesson)}
+                                  className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow transition-all cursor-pointer active:scale-95"
+                                >
+                                  <Send className="w-3.5 h-3.5" />
+                                  <span>Push Assignment 🚀</span>
+                                </button>
+                              </div>
                             </div>
                           </div>
                         )}
@@ -2371,16 +2480,28 @@ export function TeachersPortal({
                     )}
 
                     {/* Quick Pupil Actions */}
-                    <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
+                    <div className="flex items-center gap-1.5 pt-1 border-t border-slate-100">
                       <button
+                        type="button"
                         onClick={() => setInspectingPupil(pupil)}
                         className="flex-1 py-1.5 px-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-[11px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
                       >
                         <ClipboardList className="w-3.5 h-3.5 text-blue-600" />
-                        <span>View Assessment Card</span>
+                        <span>Card</span>
                       </button>
 
                       <button
+                        type="button"
+                        onClick={() => handleSharePupilProgress(pupil)}
+                        className="flex-1 py-1.5 px-2 rounded-xl bg-cyan-50 hover:bg-cyan-100 text-cyan-800 border border-cyan-200 text-[11px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                        title="Share CBC progress report with parent via Web Share API / WhatsApp"
+                      >
+                        <Share2 className="w-3.5 h-3.5 text-cyan-600" />
+                        <span>Share Progress</span>
+                      </button>
+
+                      <button
+                        type="button"
                         onClick={() => {
                           setActiveTab('messages');
                           setActiveThreadId('thread-1');
@@ -2388,7 +2509,7 @@ export function TeachersPortal({
                         className="flex-1 py-1.5 px-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-[11px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
                       >
                         <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>Message Parent</span>
+                        <span>Message</span>
                       </button>
                     </div>
                   </div>
@@ -3199,21 +3320,37 @@ export function TeachersPortal({
               )}
             </div>
 
-            <button
-              onClick={() => {
-                downloadCBCReportCard(inspectingPupil.name, inspectingPupil.upi, inspectingPupil.grade || assessGrade || 'Grade 4', {
-                  term: 'Term 1',
-                  standing: 'Meeting Expectations (ME)',
-                  remark: inspectingPupil.focusZoneNotes || 'Consistent effort and positive CBC participation.',
-                });
-                showToast(`Official assessment card downloaded for ${inspectingPupil.name}! 📄`);
-                setInspectingPupil(null);
-              }}
-              className="w-full mt-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-            >
-              <Download className="w-4 h-4" />
-              <span>Download Official Report Card</span>
-            </button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
+              <button
+                type="button"
+                onClick={() => {
+                  const p = inspectingPupil;
+                  setInspectingPupil(null);
+                  handleSharePupilProgress(p);
+                }}
+                className="py-2.5 px-3 rounded-xl bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow cursor-pointer active:scale-95"
+              >
+                <Share2 className="w-4 h-4" />
+                <span>Share with Parent (Native OS)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  downloadCBCReportCard(inspectingPupil.name, inspectingPupil.upi, inspectingPupil.grade || assessGrade || 'Grade 4', {
+                    term: 'Term 1',
+                    standing: 'Meeting Expectations (ME)',
+                    remark: inspectingPupil.focusZoneNotes || 'Consistent effort and positive CBC participation.',
+                  });
+                  showToast(`Official assessment card downloaded for ${inspectingPupil.name}! 📄`);
+                  setInspectingPupil(null);
+                }}
+                className="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Download className="w-4 h-4 text-blue-400" />
+                <span>Download Report Card</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -4325,6 +4462,22 @@ export function TeachersPortal({
           },
         ]}
       />
+
+      {/* WEB SHARE API PREVIEW & NATIVE OS SHARE MODAL */}
+      {shareModalConfig && (
+        <SharePreviewModal
+          isOpen={shareModalConfig.isOpen}
+          onClose={() => setShareModalConfig(null)}
+          title={shareModalConfig.title}
+          shareType={shareModalConfig.shareType}
+          pupilData={shareModalConfig.pupilData}
+          lessonData={shareModalConfig.lessonData}
+          customText={shareModalConfig.customText}
+          recipientPhone={shareModalConfig.recipientPhone}
+          recipientName={shareModalConfig.recipientName}
+          showToast={showToast}
+        />
+      )}
     </div>
   );
 }

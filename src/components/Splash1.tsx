@@ -1,71 +1,57 @@
-import React, { useEffect } from 'react';
-import { Logo } from './Logo.tsx';
+import React, { useEffect, useState } from 'react';
+import { dataLayer } from '../services/dataLayer.ts';
 
 interface Splash1Props {
   onComplete: () => void;
 }
 
 export function Splash1({ onComplete }: Splash1Props) {
+  const [imgSrc, setImgSrc] = useState<string>(() => {
+    const profile = dataLayer.getSchoolProfile();
+    return profile.splash1ImageUrl || '/src/assets/images/splash1_official_crest_1792069867802.jpg';
+  });
+
+  const durationSeconds = (() => {
+    const profile = dataLayer.getSchoolProfile();
+    return typeof profile.splash1DurationSeconds === 'number' && profile.splash1DurationSeconds > 0
+      ? profile.splash1DurationSeconds
+      : 5;
+  })();
+
   useEffect(() => {
-    // 5-second duration per PRD v7 Section 4
+    // Stays for exactly 5 seconds (or user-configured duration) with no tap/skip controls
     const timer = setTimeout(() => {
       onComplete();
-    }, 5000);
+    }, durationSeconds * 1000);
+
     return () => clearTimeout(timer);
-  }, [onComplete]);
+  }, [onComplete, durationSeconds]);
 
   return (
     <div
       data-splash="true"
-      onClick={onComplete}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          onComplete();
-        }
-      }}
-      className="relative w-full h-full flex-1 flex flex-col items-center justify-center cursor-pointer select-none bg-[#070D1E] overflow-hidden"
-      aria-label="Little Roses Academy Splash Screen. Tap to continue."
+      className="relative w-full h-full flex-1 flex flex-col items-center justify-center select-none bg-[#070D1E] overflow-hidden"
+      aria-label="Little Roses Academy Campus and Crest"
     >
-      {/* Background Campus Image with measured dark navy scrim */}
+      {/* 
+        Official school photo displayed 100% pure exactly as it is:
+        - No dark scrim or gradient darkening the photo
+        - No overlaid logo or text duplicates
+        - No 'Tap anywhere to continue' or skip affordances
+        - Full natural brilliance, edge-to-edge
+      */}
       <img
-        src="/src/assets/images/splash1_campus_crest_1790668349675.jpg"
-        alt="Little Roses Academy Campus Grounds"
-        className="absolute inset-0 w-full h-full object-cover opacity-35 scale-100 transition-transform duration-1000 ease-out"
-        onError={(e) => {
-          // Fallback to secondary campus asset if needed
-          const target = e.target as HTMLImageElement;
-          if (target.src.indexOf('little_roses_campus') === -1) {
-            target.src = '/src/assets/images/little_roses_campus_1790246122159.jpg';
+        src={imgSrc}
+        alt="Little Roses Academy Nakuru - Much From Little"
+        className="w-full h-full object-cover object-center max-w-full max-h-full transition-opacity duration-300"
+        referrerPolicy="no-referrer"
+        onError={() => {
+          // Fallback if custom image fails to load
+          if (imgSrc !== '/src/assets/images/splash1_campus_crest_1790668349675.jpg') {
+            setImgSrc('/src/assets/images/splash1_campus_crest_1790668349675.jpg');
           }
         }}
       />
-
-      {/* Atmospheric Navy Gradient Scrim ensuring WCAG AA contrast */}
-      <div className="absolute inset-0 bg-gradient-to-b from-[#070D1E]/80 via-[#070D1E]/65 to-[#070D1E]/90 z-10 pointer-events-none" />
-
-      {/* Centered Official Round School Crest & Tagline */}
-      <div className="relative z-20 flex flex-col items-center justify-center p-6 text-center space-y-5 animate-in fade-in zoom-in-95 duration-700">
-        <Logo size="splash" showTagline={true} />
-
-        <div className="pt-4 space-y-1">
-          <p className="text-xs sm:text-sm font-semibold tracking-wide text-slate-300">
-            Nakuru, Kenya
-          </p>
-          <p className="text-[11px] uppercase tracking-widest text-amber-400 font-medium">
-            Kenyan CBC Primary School • Grades 1–6
-          </p>
-        </div>
-      </div>
-
-      {/* Subtle Bottom Affordance */}
-      <div className="absolute bottom-6 z-20 flex items-center gap-2 text-[11px] text-slate-400 font-mono tracking-wider bg-slate-900/60 backdrop-blur-sm px-3.5 py-1.5 rounded-full border border-slate-800">
-        <span>Tap anywhere to continue</span>
-        <span className="text-slate-500 font-sans">·</span>
-        <span className="text-amber-400 font-bold">5s</span>
-      </div>
     </div>
   );
 }
-

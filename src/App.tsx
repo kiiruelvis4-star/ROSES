@@ -12,6 +12,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Splash1 } from './components/Splash1.tsx';
 import { Splash2 } from './components/Splash2.tsx';
+import { SplashCustomizerModal } from './components/SplashCustomizerModal.tsx';
 import { PortalSelection, PortalType } from './components/PortalSelection.tsx';
 import { AdminLogin } from './components/AdminLogin.tsx';
 import { TeachersLogin } from './components/TeachersLogin.tsx';
@@ -99,6 +100,7 @@ export default function App() {
   const [appearance, setAppearance] = useState(dataLayer.getAppearanceConfig());
   const [replayCount, setReplayCount] = useState(0);
   const [showQuickJumper, setShowQuickJumper] = useState(false);
+  const [isSplashCustomizerOpen, setIsSplashCustomizerOpen] = useState(false);
 
   // Subscribe to session and appearance changes
   useEffect(() => {
@@ -183,6 +185,13 @@ export default function App() {
               >
                 Learners App
               </button>
+              <button
+                onClick={() => { setIsSplashCustomizerOpen(true); setShowQuickJumper(false); }}
+                className="col-span-2 px-2 py-1.5 rounded-lg bg-pink-500/20 text-pink-300 font-bold hover:bg-pink-500/30 text-left truncate flex items-center gap-1.5"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-pink-400" />
+                Customise Splash Screens
+              </button>
             </div>
           </div>
         ) : (
@@ -217,6 +226,7 @@ export default function App() {
 
           {screen === 'portals' && (
             <PortalSelection
+              onOpenSplashCustomizer={() => setIsSplashCustomizerOpen(true)}
               onSelectPortal={(portalType) => {
                 if (portalType === 'admin') setScreen('login_admin');
                 if (portalType === 'teachers') setScreen('login_teachers');
@@ -288,6 +298,13 @@ export default function App() {
           )}
         </div>
       </main>
+
+      {/* In-App Splash Customizer Modal */}
+      <SplashCustomizerModal
+        isOpen={isSplashCustomizerOpen}
+        onClose={() => setIsSplashCustomizerOpen(false)}
+        onPreviewSplashFlow={handleRestartFlow}
+      />
     </div>
   );
 }

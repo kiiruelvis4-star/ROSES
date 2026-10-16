@@ -32,6 +32,7 @@ export interface TeacherAccountRecord {
   residence?: string;
   assignedGrades: string[];
   subjects: string[];
+  assignedSubjects?: string[];
   gradeAssignments?: Record<string, string[]>;
   gradeSubjectAssignments?: TeacherGradeAssignment[];
   tier: 'lower' | 'upper' | 'all';
@@ -52,6 +53,28 @@ export const LRA_GRADES = [
   'Grade 4',
   'Grade 5',
   'Grade 6',
+] as const;
+
+export const CANONICAL_GRADES = [
+  'PP1',
+  'PP2',
+  'Grade 1',
+  'Grade 2',
+  'Grade 3',
+  'Grade 4',
+  'Grade 5',
+  'Grade 6',
+] as const;
+
+export const CANONICAL_CBC_SUBJECTS = [
+  'Mathematics Activities',
+  'English Language Activities',
+  'Kiswahili Language Activities',
+  'Science and Technology',
+  'Social Studies',
+  'Agriculture and Nutrition',
+  'Creative Arts & Sports',
+  'Religious Education (CRE/IRE)',
 ] as const;
 
 export const LRA_GRADE_SUBJECTS: Record<string, string[]> = {
@@ -452,6 +475,7 @@ export interface PupilRecord {
   name: string;
   gender: 'Boy' | 'Girl';
   grade: string;
+  stream?: string;
   phone?: string;
   parentName: string;
   parentPhone: string;
@@ -469,6 +493,16 @@ export interface PupilRecord {
   currentAcademicYear?: string;
   academicYearHistory?: PupilAcademicYearHistoryItem[];
   promotionStatus?: 'Pending' | 'Promoted' | 'Retained' | 'Transferred' | 'Alumni' | 'Year Closed';
+  assessmentMarks?: Array<{
+    id?: string;
+    subject: string;
+    strand?: string;
+    score: number;
+    type?: 'cat' | 'assignment' | 'homework' | 'exam';
+    date?: string;
+  }>;
+  starsCount?: number;
+  attendancePercent?: number;
 }
 
 export interface ParentAccount {
@@ -483,9 +517,12 @@ export interface ParentAccount {
   passwordHash: string;
   linkedChildrenUpi: string[];
   pupilUpiList: string[];
+  childrenUpi?: string[];
   createdAt: string;
   updatedAt?: string;
 }
+
+export type ParentAccountRecord = ParentAccount;
 
 export interface AssignmentRecord {
   id: string;
@@ -733,6 +770,7 @@ export interface ResourcePackageFilter {
 export interface ResourcePackageRecord {
   id: string;
   packageName: string;
+  title?: string;
   description?: string;
   category: string;
   grade: string;
@@ -743,6 +781,7 @@ export interface ResourcePackageRecord {
   term: string;
   documents: ResourceDocumentItem[];
   recipientTeacherIds: string[];
+  assignedTeacherIds?: string[];
   uploaderRole?: 'admin' | 'teacher';
   uploaderId?: string;
   uploaderName?: string;
@@ -792,6 +831,9 @@ export interface SchoolProfileRecord {
   physicalAddress?: string;
   registrationNumber?: string;
   logoDataUrl?: string | null;
+  splash1ImageUrl?: string | null;
+  splash2ImageUrl?: string | null;
+  splash1DurationSeconds?: number;
   updatedAt?: string;
   updatedBy?: string;
 }
@@ -1316,6 +1358,15 @@ class SchoolDataLayer {
     return this.queue.length;
   }
 
+  public addStarReward(identifier: string, count: number = 1): void {
+    try {
+      const key = `lra_stars_${identifier}`;
+      const current = parseInt(localStorage.getItem(key) || '0', 10);
+      localStorage.setItem(key, (current + count).toString());
+      notifyListeners();
+    } catch {}
+  }
+
   public getSyncPillStatus(): { status: 'synced' | 'saved_to_phone'; label: string; details?: string } {
     if (!this.isOnlineStatus || this.queue.length > 0) {
       return {
@@ -1386,6 +1437,9 @@ class SchoolDataLayer {
             physicalAddress: parsed.physicalAddress || '',
             registrationNumber: parsed.registrationNumber || '',
             logoDataUrl: parsed.logoDataUrl !== undefined ? parsed.logoDataUrl : this.getAttachedLogo(),
+            splash1ImageUrl: parsed.splash1ImageUrl !== undefined ? parsed.splash1ImageUrl : null,
+            splash2ImageUrl: parsed.splash2ImageUrl !== undefined ? parsed.splash2ImageUrl : null,
+            splash1DurationSeconds: typeof parsed.splash1DurationSeconds === 'number' ? parsed.splash1DurationSeconds : 5,
             updatedAt: parsed.updatedAt,
             updatedBy: parsed.updatedBy,
           };
@@ -1402,6 +1456,9 @@ class SchoolDataLayer {
       physicalAddress: '',
       registrationNumber: '',
       logoDataUrl: this.getAttachedLogo(),
+      splash1ImageUrl: null,
+      splash2ImageUrl: null,
+      splash1DurationSeconds: 5,
     };
   }
 

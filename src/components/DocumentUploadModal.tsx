@@ -22,7 +22,9 @@ import {
   Table,
   Eye,
   Check,
-  ShieldCheck
+  ShieldCheck,
+  AlertTriangle,
+  RefreshCw,
 } from 'lucide-react';
 import {
   dataLayer,
@@ -36,6 +38,7 @@ import {
   SupportedFileType
 } from '../services/universalDocumentService';
 import { CANONICAL_CBC_SUBJECTS, CANONICAL_RESOURCE_CATEGORIES } from '../services/aiDocumentAssistant';
+import { schoolAIService, DocumentMismatchReport } from '../services/schoolAIService';
 
 export interface DocumentUploadModalProps {
   isOpen: boolean;
